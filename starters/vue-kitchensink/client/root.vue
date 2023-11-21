@@ -1,4 +1,6 @@
 <script>
+import 'uno.css'
+
 export function configure (app) {
   // Extend Vue application instance here
 }
