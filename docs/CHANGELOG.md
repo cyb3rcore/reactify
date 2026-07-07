@@ -1,3 +1,0 @@
-# @fastify-vite/docs
-
-## null
