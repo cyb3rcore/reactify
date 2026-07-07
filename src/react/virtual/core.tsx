@@ -1,127 +1,203 @@
-// @ts-nocheck
-import { useEffect } from 'react'
-import { BrowserRouter, StaticRouter, useLocation } from 'react-router'
-import { proxy } from 'valtio'
-import { RouteContext, useRouteContext } from '../client.js'
-import layouts from '$app/layouts.js'
-import { waitFetch, waitResource } from '$app/resource.js'
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from 'react'
+import { matchRoute, parseLocation, type ParsedLocation } from '../router'
 
-export const isServer = import.meta.env.SSR
-export const Router = isServer ? StaticRouter : BrowserRouter
+const isServer = typeof window === 'undefined'
+const routeMapRef: { current: Record<string, any> } = { current: {} }
 
-let serverActionCounter = 0
-
-export function createServerAction(name) {
-  return `/-/action/${name ?? serverActionCounter++}`
+export interface RouteDef {
+  path: string
+  id?: string
+  component?: React.ComponentType<any>
+  layout?: React.ComponentType<{ children: ReactNode }>
+  getData?: (ctx: any) => Promise<Record<string, any>>
+  getMeta?: (ctx: any) => Promise<any>
+  onEnter?: (ctx: any) => Promise<any>
+  rsc?: boolean
 }
 
-export function useServerAction(action, options = {}) {
-  if (import.meta.env.SSR) {
-    const { req, server } = useRouteContext()
-    req.route.actionData[action] = waitFetch(`${server.serverURL}${action}`, options, req.fetchMap)
-    return req.route.actionData[action]
-  }
-  const { actionData } = useRouteContext()
-  if (actionData[action]) {
-    return actionData[action]
-  }
-  actionData[action] = waitFetch(action, options)
-  return actionData[action]
+export interface RouteContextValue {
+  location: ParsedLocation
+  match: RouteDef | null
+  params: Record<string, string>
+  navigate: (to: string | number, options?: { replace?: boolean; state?: any }) => void
+  route: Record<string, any> | null
 }
 
-export function AppRoute({ ctxHydration, ctx, children }) {
-  // If running on the server, assume all data
-  // functions have already ran through the preHandler hook
-  if (isServer) {
-    const Layout = layouts[ctxHydration.layout ?? 'default']
-    return (
-      <RouteContext.Provider
-        value={{
-          ...ctx,
-          ...ctxHydration,
-          state: isServer ? (ctxHydration.state ?? {}) : proxy(ctxHydration.state ?? {}),
-        }}
-      >
-        <Layout>{children}</Layout>
-      </RouteContext.Provider>
-    )
-  }
-  // Note that on the client, window.route === ctxHydration
+const RouterCtx = createContext<RouteContextValue | null>(null)
 
-  // Indicates whether or not this is a first render on the client
-  ctx.firstRender = window.route.firstRender
+export function useRouteContext(): RouteContextValue {
+  const ctx = useContext(RouterCtx)
+  if (!ctx) throw new Error('useRouteContext must be used within a RouteProvider')
+  return ctx
+}
 
-  // If running on the client, the server context data
-  // is still available, hydrated from window.route
-  if (ctx.firstRender) {
-    ctx.data = window.route.data
-    ctx.head = window.route.head
-  } else {
-    ctx.data = undefined
-    ctx.head = undefined
-  }
+export function useNavigate() {
+  return useRouteContext().navigate
+}
 
-  const location = useLocation()
-  const path = location.pathname + location.search + location.hash
+export function useParams() {
+  return useRouteContext().params
+}
 
-  // When the next route renders client-side,
-  // force it to execute all URMA hooks again
+export function useRouteData() {
+  const { route } = useRouteContext()
+  return route?.data ?? null
+}
+
+export function useRouteHead() {
+  const { route } = useRouteContext()
+  return route?.head ?? null
+}
+
+async function waitFetch(url: string): Promise<any> {
+  const cacheBuster = `_t=${Date.now()}`
+  const separator = url.includes('?') ? '&' : '?'
+  const response = await fetch(`${url}${separator}${cacheBuster}`)
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`)
+  return response.json()
+}
+
+export interface RouteProviderProps {
+  routes: RouteDef[]
+  location?: string
+  ctxHydration?: Record<string, any>
+  routeMap?: Record<string, any>
+  children: ReactNode
+}
+
+export function RouteProvider({
+  routes,
+  location: initialUrl,
+  ctxHydration: serverHydration,
+  routeMap,
+  children,
+}: RouteProviderProps) {
+  const initialRoute = initialUrl
+    ? (() => {
+        const loc = parseLocation(initialUrl)
+        const result = matchRoute(routes, loc.pathname)
+        return {
+          location: loc,
+          match: result ?? { route: null, params: {} },
+          route: serverHydration ?? null,
+        }
+      })()
+    : (() => {
+        const loc = parseLocation(window.location)
+        const result = matchRoute(routes, loc.pathname)
+        return {
+          location: loc,
+          match: result ?? { route: null, params: {} },
+          route: (window as any).route ?? serverHydration ?? null,
+        }
+      })()
+
+  const [location, setLocation] = useState<ParsedLocation>(initialRoute.location)
+  const [match, setMatch] = useState<{ route: RouteDef | null; params: Record<string, string> }>({
+    route: initialRoute.match.route,
+    params: initialRoute.match.params,
+  })
+  const [routeData, setRouteData] = useState<Record<string, any> | null>(initialRoute.route)
+  const firstRenderRef = useRef(true)
+  if (routeMap) routeMapRef.current = routeMap
+
+  // On navigation (non-RSC): re-fetch data via getData endpoint
   useEffect(() => {
-    window.route.firstRender = false
-    window.route.actionData = {}
-  }, [location])
+    if (firstRenderRef.current) {
+      firstRenderRef.current = false
+      return
+    }
+    if (!match.route || match.route.rsc) return
 
-  // If we have a getData function registered for this route
-  if (!ctx.data && ctx.getData) {
-    try {
-      const { pathname, search } = location
-      // If not, fetch data from the JSON endpoint
-      ctx.data = waitFetch(`/-/data${pathname}${search}`)
-    } catch (status) {
-      // If it's an actual error...
-      if (status instanceof Error) {
-        ctx.error = status
+    const loadData = async () => {
+      const route = match.route!
+      const state: Record<string, any> = { data: {} }
+
+      if (route.getData) {
+        try {
+          const result = await waitFetch(`/-/data${location.pathname}`)
+          state.data = result
+        } catch (err) {
+          console.error('[RouteProvider] getData error:', err)
+        }
       }
-      // If it's just a promise (suspended state)
-      throw status
+
+      setRouteData({ ...state, head: null, firstRender: false })
     }
-  }
 
-  // Note that ctx.loader() at this point will resolve the
-  // memoized module, so there's barely any overhead
+    loadData()
+  }, [location.pathname])
 
-  if (!ctx.firstRender && ctx.getMeta) {
-    const updateMeta = async () => {
-      const { getMeta } = await ctx.loader()
-      ctx.head = await getMeta(ctx)
-      ctxHydration.useHead.push(ctx.head)
+  // Client-side: listen to popstate for back/forward
+  useEffect(() => {
+    const onPop = () => {
+      const loc = parseLocation(window.location)
+      setLocation(loc)
+      const result = matchRoute(routes, loc.pathname)
+      setMatch(result ?? { route: null, params: {} })
     }
-    waitResource(path, 'updateMeta', updateMeta)
-  }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [routes])
 
-  if (!ctx.firstRender && ctx.onEnter) {
-    const runOnEnter = async () => {
-      const { onEnter } = await ctx.loader()
-      const updatedData = await onEnter(ctx)
-      if (!ctx.data) {
-        ctx.data = {}
+  // Client-side: delegated link interception for SPA navigation
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement).closest('a[href]')
+      if (!link || !link.href) return
+      if (e.metaKey || e.ctrlKey || e.button === 1) return
+      if ((link as HTMLAnchorElement).target === '_blank') return
+      const url = new URL(link.href)
+      if (url.origin !== window.location.origin) return
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return
+      if (link.hasAttribute('download')) return
+      e.preventDefault()
+      window.history.pushState(null, '', link.href)
+      const loc = parseLocation(window.location)
+      setLocation(loc)
+      const result = matchRoute(routes, loc.pathname)
+      setMatch(result ?? { route: null, params: {} })
+    }
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [routes])
+
+  const navigate = useCallback(
+    (to: string | number, options?: { replace?: boolean; state?: any }) => {
+      if (typeof to === 'number') {
+        window.history.go(to)
+        return
       }
-      Object.assign(ctx.data, updatedData)
-    }
-    waitResource(path, 'onEnter', runOnEnter)
-  }
-
-  const Layout = layouts[ctx.layout ?? 'default']
-
-  return (
-    <RouteContext.Provider
-      value={{
-        ...ctxHydration,
-        ...ctx,
-        state: isServer ? (ctxHydration.state ?? {}) : proxy(ctxHydration.state ?? {}),
-      }}
-    >
-      <Layout>{children}</Layout>
-    </RouteContext.Provider>
+      if (options?.replace) {
+        window.history.replaceState(options.state ?? null, '', to)
+      } else {
+        window.history.pushState(options.state ?? null, '', to)
+      }
+      const loc = parseLocation(window.location)
+      setLocation(loc)
+      const result = matchRoute(routes, loc.pathname)
+      setMatch(result ?? { route: null, params: {} })
+    },
+    [routes]
   )
+
+  const ctx: RouteContextValue = {
+    location,
+    match: match.route,
+    params: match.params,
+    navigate,
+    route: routeData,
+  }
+
+  return <RouterCtx.Provider value={ctx}>{children}</RouterCtx.Provider>
 }
+
+export { useServerAction } from './rsc-content'
