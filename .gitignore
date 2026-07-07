@@ -7,9 +7,8 @@ dist
 node_modules
 *.tsbuildinfo
 
-# This project uses pnpm, so we do not want other lock files
+# Lock files
 bun.lockb
-package-lock.json
 yarn.lock
 
 # Vite logs files
