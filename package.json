@@ -1,6 +1,7 @@
 {
   "name": "reactify",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Fork of fastify-vite with React support",
   "type": "module",
   "main": "dist/index.js",
