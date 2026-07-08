@@ -151,10 +151,10 @@ export function RouteProvider({
   // Client-side: delegated link interception for SPA navigation
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      const link = (e.target as HTMLElement).closest('a[href]')
-      if (!link || !link.href) return
+      const link = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null
+      if (!link) return
       if (e.metaKey || e.ctrlKey || e.button === 1) return
-      if ((link as HTMLAnchorElement).target === '_blank') return
+      if (link.target === '_blank') return
       const url = new URL(link.href)
       if (url.origin !== window.location.origin) return
       if (url.protocol !== 'http:' && url.protocol !== 'https:') return
