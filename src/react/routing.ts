@@ -142,8 +142,7 @@ export async function createRoute(
   }
 
   // Route handler
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let handler: ((req: any, reply: any) => unknown) | undefined
+  let handler: ((req: Record<string, unknown>, reply: Record<string, unknown>) => unknown) | undefined
   if (route.rsc) {
     handler = async (req: Record<string, unknown>, reply: Record<string, unknown>) => {
       await rscStore.run(

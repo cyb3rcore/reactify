@@ -1,5 +1,5 @@
 import type { Server } from 'node:http'
-import Fastify, { type FastifyPluginCallback } from 'fastify'
+import Fastify, { type FastifyPluginCallback, type FastifyRequest, type FastifyReply } from 'fastify'
 import { describe, expectTypeOf, it } from 'vitest'
 import * as ReactifyViteAll from '../index.js'
 import ReactifyVite, { reactifyVite, type ReactifyViteOptions } from '../index.js'
@@ -22,7 +22,7 @@ const options = {
   },
   renderer: {
     createErrorHandler(args, scope, config) {
-      return (error: Error, req: any, reply: any) => {}
+      return (error: Error, req: FastifyRequest, reply: FastifyReply) => {}
     },
     createRoute(args, scope, config) {},
     createRouteHandler(args, scope, config) {

@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { RouteProvider } from './core'
+import { RouteProvider, type RouteDef } from './core'
 
 describe('RouteProvider', () => {
   it('renders children', () => {
-    const routes: any[] = [{ path: '/', component: () => null }]
+    const routes: RouteDef[] = [{ path: '/', component: () => null }]
     render(
       <RouteProvider routes={routes} location="/">
         <div>hello</div>
