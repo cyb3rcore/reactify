@@ -1,5 +1,11 @@
 import type { FastifyInstance, RouteOptions } from 'fastify'
 
+/**
+ * Route definition used by the Vite plugin system to register routes.
+ * The index signature allows renderers to attach metadata (getData, getMeta, onEnter, etc.)
+ * — those renderer-specific fields are accessed by the concrete renderer implementation
+ * (e.g., routing.ts for React) via a richer subtype.
+ */
 export interface RouteDefinition extends Partial<RouteOptions> {
   configure?: (scope: FastifyInstance) => void | Promise<void>
   default?: (...args: unknown[]) => unknown
@@ -8,6 +14,7 @@ export interface RouteDefinition extends Partial<RouteOptions> {
   path?: string
   // Runtime sets Fastify's `url` during registration (derived from `path`).
   url?: never
+  /** Renderers attach metadata here. Access through a subtype with known properties. */
   [key: string]: unknown
 }
 
