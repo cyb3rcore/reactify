@@ -97,6 +97,7 @@ describe('react-base', () => {
       const res = await server.inject({ method: 'GET', url: '/streaming' })
       expect(res.statusCode).toBe(200)
       expect(res.body).toContain('Streaming SSR')
+      expect(res.headers['content-length']).toBeUndefined()
     } finally {
       await server.close()
     }

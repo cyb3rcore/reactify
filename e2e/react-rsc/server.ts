@@ -15,5 +15,5 @@ export async function main(dev?: boolean) {
 
 if (process.argv[1] === import.meta.filename) {
   const server = await main()
-  await server.listen({ port: 3005 })
+  await server.listen({ port: 3002 })
 }
