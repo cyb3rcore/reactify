@@ -133,7 +133,7 @@ export async function generateHTML(
 
   const el = '<!-- element -->'
   const indexHtml = loadHtmlTemplate()
-  const [templateBefore, templateAfter] = indexHtml.split(el)
+  const [templateBefore = '', templateAfter = ''] = indexHtml.split(el)
 
   const bootstrapScriptContent =
     await import.meta.viteRsc.loadBootstrapScriptContent('index')

@@ -1,6 +1,39 @@
 import type { FastifyInstance } from 'fastify'
 
-class Routes extends Array<Record<string, unknown>> {
+/** Known properties exported by a route page module. */
+export interface RouteExports {
+  path?: string
+  name?: string
+  component?: unknown
+  layout?: unknown
+  getData?: unknown
+  getMeta?: unknown
+  onEnter?: unknown
+  streaming?: unknown
+  clientOnly?: unknown
+  serverOnly?: unknown
+  configure?: unknown
+  onRequest?: unknown
+  preParsing?: unknown
+  preValidation?: unknown
+  preHandler?: unknown
+  preSerialization?: unknown
+  onError?: unknown
+  onSend?: unknown
+  onResponse?: unknown
+  onTimeout?: unknown
+  onRequestAbort?: unknown
+}
+
+/** A route entry in the Routes collection. */
+type RouteRecord = RouteExports & {
+  id?: string
+  name?: string
+  path?: string
+  [key: string]: unknown
+}
+
+class Routes extends Array<RouteRecord> {
   toJSON(): Array<Record<string, unknown>> {
     return this.map((route) => ({
       id: route.id,
@@ -45,7 +78,7 @@ export async function createRoutes(
   { param } = { param: /\[([.\w]+\+?)\]/ },
 ): Promise<Routes> {
   const { default: from } = await fromPromise
-  const promises: Promise<Record<string, unknown>>[] = []
+  const promises: Promise<RouteRecord>[] = []
   if (Array.isArray(from)) {
     for (const routeDef of from) {
       promises.push(
@@ -53,9 +86,9 @@ export async function createRoutes(
           (routeDef as Record<string, unknown>).path as string,
           (routeDef as Record<string, unknown>).component as () => Promise<unknown>,
         ).then((routeModule) => ({
-          id: (routeDef as Record<string, unknown>).path,
-          name: (routeDef as Record<string, unknown>).path ?? routeModule.path,
-          path: (routeDef as Record<string, unknown>).path ?? routeModule.path,
+          id: (routeDef as Record<string, unknown>).path as string,
+          name: (routeDef as Record<string, unknown>).path as string ?? routeModule.path,
+          path: (routeDef as Record<string, unknown>).path as string ?? routeModule.path,
           ...routeModule,
         })),
       )
@@ -65,14 +98,14 @@ export async function createRoutes(
       promises.push(
         getRouteModule(path, (from as Record<string, unknown>)[path]).then(
           (routeModule) => {
-            const routePath =
+            const routePath: string =
               (routeModule.path as string) ??
               path
                 .slice(6, -4)
-                .replace(param, (_, m) => `:${m}`)
+                .replace(param, (_, m: string) => `:${m}`)
                 .replace(/:\w+\+/, () => `*`)
                 .replace(/\/index$/, '/')
-                .replace(/(.+)\/+$/, (...m) => m[1])
+                .replace(/(.+)\/+$/, (...m: string[]) => m[1])
             const routeName: string =
               (routeModule.name as string) ??
               path
@@ -85,7 +118,7 @@ export async function createRoutes(
               id: path,
               name: routeName || 'catch-all',
               path: routePath,
-              layout: routeModule.layout,
+              layout: routeModule.layout as string | undefined,
               ...routeModule,
             }
           },
@@ -98,7 +131,7 @@ export async function createRoutes(
 
 function getRouteModuleExports(
   routeModule: Record<string, unknown>,
-): Record<string, unknown> {
+): RouteExports {
   return {
     component: routeModule.default,
     layout: routeModule.layout,
@@ -125,7 +158,7 @@ function getRouteModuleExports(
 async function getRouteModule(
   _path: string,
   routeModuleInput: unknown,
-): Promise<Record<string, unknown>> {
+): Promise<RouteExports> {
   if (typeof routeModuleInput === 'function') {
     const routeModule = await routeModuleInput()
     return getRouteModuleExports(routeModule as Record<string, unknown>)
