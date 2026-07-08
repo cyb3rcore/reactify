@@ -116,7 +116,7 @@ export default class RouteContext {
     const { default: _, ...extra } = initial
     for (const [prop, value] of Object.entries(extra)) {
       if (prop !== 'data' && prop !== 'state') {
-        Object.defineProperty(RouteContext.prototype, prop, value)
+        Object.defineProperty(RouteContext.prototype, prop, value as PropertyDescriptor)
       }
     }
   }

@@ -24,6 +24,6 @@ export function createHtmlTemplates(source: string, config: Record<string, unkno
   }
 }
 
-function removeClientModule(html) {
+function removeClientModule(html: string) {
   return removeHtmlModuleScripts(html)
 }

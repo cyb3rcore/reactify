@@ -12,6 +12,7 @@ interface ImportMeta {
 interface Window {
   route: Record<string, unknown>
   routes: Array<Record<string, unknown>>
+  __FLIGHT_DATA?: unknown[]
 }
 
 // RSC plugin runtime extensions on import.meta

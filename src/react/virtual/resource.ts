@@ -68,9 +68,10 @@ export function waitFetch(
 ): Record<string, unknown> {
   const loaderStatus = fetchMap.get(path)
   if (loaderStatus) {
-    if (loaderStatus.error || (loaderStatus.data as Record<string, unknown>)?.statusCode === 500) {
-      if ((loaderStatus.data as Record<string, unknown>)?.statusCode === 500) {
-        throw new Error((loaderStatus.data as Record<string, unknown>).message as string)
+    const data = loaderStatus.data
+    if (loaderStatus.error || data?.statusCode === 500) {
+      if (data?.statusCode === 500) {
+        throw new Error(data.message as string)
       }
       throw loaderStatus.error
     }

@@ -1,87 +1,108 @@
-// @ts-nocheck
-import viteFastify from '../../vite/plugin.js'
+import type { Plugin, ResolvedConfig } from 'vite'
+import viteFastify from '../../vite/plugin'
 import {
   prefix,
   resolveId,
   loadSource,
   loadVirtualModule,
   createPlaceholderExports,
-} from './virtual.js'
-import { closeBundle } from './preload.js'
+} from './virtual'
+import { closeBundle } from './preload'
 
-export default function viteFastifyReactPlugin({ ts } = {}) {
-  const context = {
+interface PluginContext {
+  root: string | null
+  environment: { name: string; config: ResolvedConfig }
+  resolvedConfig?: ResolvedConfig
+  resolvedBundle?: unknown
+  indexHtml?: string
+}
+
+export default function viteReactifyPlugin(
+  options: { ts?: boolean } = {},
+): Plugin[] {
+  const context: PluginContext = {
     root: null,
+    environment: { name: '', config: {} as ResolvedConfig },
   }
+
   return [
     viteFastify({
-      clientModule: ts ? '$app/index.ts' : '$app/index.js',
-    }),
+      clientModule: options.ts ? '$app/index.ts' : '$app/index.js',
+    }) as Plugin,
     {
-      // https://vite.dev/guide/api-plugin#conventions
-      name: 'vite-plugin-react-fastify',
+      name: 'vite-plugin-reactify',
       config,
       configResolved: configResolved.bind(context),
       resolveId: resolveId.bind(context),
-      async load(id) {
-        if (id.includes('?server') && !this.environment.config.build?.ssr) {
-          const source = loadSource(id)
-          return createPlaceholderExports(source)
-        }
-        if (id.includes('?client') && this.environment.config.build?.ssr) {
-          const source = loadSource(id)
-          return createPlaceholderExports(source)
-        }
-        if (prefix.test(id)) {
-          const [, virtual] = id.split(prefix)
-          if (virtual) {
-            return loadVirtualModule(virtual)
-          }
-        }
-      },
+      load: load.bind(context),
       transformIndexHtml: {
-        order: 'post',
+        order: 'post' as const,
         handler: transformIndexHtml.bind(context),
       },
-      closeBundle() {
-        closeBundle.call(this, context.resolvedBundle)
-      },
-    },
+      closeBundle: closeBundle.bind(context),
+    } as unknown as Plugin,
   ]
 }
 
-function transformIndexHtml(html, { bundle }) {
-  if (!bundle) {
-    return
+async function load(
+  this: PluginContext,
+  id: string,
+): Promise<string | { code: string; map: null } | undefined> {
+  if (id.includes('?server') && !this.environment.config.build?.ssr) {
+    const source = loadSource(id)
+    return createPlaceholderExports(source)
   }
-  this.indexHtml = html
-  this.resolvedBundle = bundle
+  if (id.includes('?client') && this.environment.config.build?.ssr) {
+    const source = loadSource(id)
+    return createPlaceholderExports(source)
+  }
+  if (prefix.test(id)) {
+    const [, virtual] = id.split(prefix)
+    if (virtual) return loadVirtualModule(virtual)
+  }
 }
 
-function configResolved(config) {
+function transformIndexHtml(
+  this: PluginContext,
+  _html: string,
+  ctx: { bundle?: unknown },
+): void {
+  if (!ctx.bundle) return
+  this.indexHtml = _html
+  this.resolvedBundle = ctx.bundle
+}
+
+function configResolved(this: PluginContext, config: ResolvedConfig): void {
   this.resolvedConfig = config
   this.root = config.root
 }
 
-function config(config, { command }) {
+function config(
+  config: Record<string, unknown>,
+  { command }: { command: string },
+): void {
   if (command === 'build') {
-    if (!config.build) {
-      config.build = {}
+    if (!config.build) config.build = {}
+    if (!(config.build as Record<string, unknown>).rollupOptions) {
+      (config.build as Record<string, unknown>).rollupOptions = {}
     }
-    if (!config.build.rollupOptions) {
-      config.build.rollupOptions = {}
+    ;(config.build as Record<string, unknown>).rollupOptions = {
+      ...((config.build as Record<string, unknown>).rollupOptions as Record<string, unknown>),
+      onwarn,
     }
-    config.build.rollupOptions.onwarn = onwarn
   }
 }
 
-function onwarn(warning, rollupWarn) {
+function onwarn(
+  warning: { code?: string; message?: { includes?: (s: string) => boolean }; exporter?: string },
+  rollupWarn: (warning: { code?: string; message?: { includes?: (s: string) => boolean }; exporter?: string }) => void,
+): void {
   if (
     !(
-      warning.code == 'PLUGIN_WARNING' &&
+      warning.code === 'PLUGIN_WARNING' &&
       warning.message?.includes?.('dynamic import will not move module into another chunk')
     ) &&
-    !(warning.code == 'UNUSED_EXTERNAL_IMPORT' && warning.exporter === 'vue')
+    !(warning.code === 'UNUSED_EXTERNAL_IMPORT' && warning.exporter === 'vue')
   ) {
     rollupWarn(warning)
   }

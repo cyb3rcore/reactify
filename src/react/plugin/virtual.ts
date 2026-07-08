@@ -18,7 +18,10 @@ const virtualModules = [
 
 export const prefix = /^\/?\$app\//
 
-export async function resolveId(id) {
+export async function resolveId(
+  this: { root: string | null },
+  id: string,
+): Promise<string | undefined> {
   // Paths are prefixed with .. on Windows by the glob import
   if (process.platform === 'win32' && /^\.\.\/[C-Z]:/.test(id)) {
     return id.substring(3)
@@ -27,7 +30,7 @@ export async function resolveId(id) {
   if (prefix.test(id)) {
     const [, virtual] = id.split(prefix)
     if (virtual) {
-      const override = loadVirtualModuleOverride(this.root, virtual)
+      const override = loadVirtualModuleOverride(this.root ?? '', virtual)
       if (override) {
         return override
       }
@@ -36,7 +39,9 @@ export async function resolveId(id) {
   }
 }
 
-export function loadVirtualModule(virtualInput) {
+export function loadVirtualModule(
+  virtualInput: string,
+): { code: string; map: null } | undefined {
   let virtual = virtualInput
   if (!virtualModules.includes(virtual)) {
     return
@@ -60,7 +65,10 @@ virtualModules.includes = function (virtual) {
   return false
 }
 
-function loadVirtualModuleOverride(viteProjectRoot, virtualInput) {
+function loadVirtualModuleOverride(
+  viteProjectRoot: string,
+  virtualInput: string,
+): string | undefined {
   let virtual = virtualInput
   if (!virtualModules.includes(virtual)) {
     return
@@ -71,12 +79,12 @@ function loadVirtualModuleOverride(viteProjectRoot, virtualInput) {
   }
 }
 
-export function loadSource(id) {
+export function loadSource(id: string): string {
   const filePath = id.replace(/\?client$/, '').replace(/\?server$/, '')
   return readFileSync(filePath, 'utf8')
 }
 
-export function createPlaceholderExports(source) {
+export function createPlaceholderExports(source: string): string {
   let pExports = ''
   for (const exp of findExports(source)) {
     switch (exp.type) {
