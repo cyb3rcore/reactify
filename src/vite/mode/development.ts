@@ -3,10 +3,10 @@ import { join, resolve } from 'node:path'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { createServer, createServerModuleRunner, isRunnableDevEnvironment } from 'vite'
 import middie, { type Handler as MiddieHandler } from '@fastify/middie'
-import type { ClientModule } from '../types/client.ts'
-import type { DevRuntimeConfig } from '../types/options.ts'
-import type { RouteDefinition } from '../types/route.ts'
-import { hasIterableRoutes, type ReactifyViteDecorationPriorToSetup } from './support.ts'
+import type { ClientModule } from '../types/client.js'
+import type { DevRuntimeConfig } from '../types/options.js'
+import type { RouteDefinition } from '../types/route.js'
+import { hasIterableRoutes, type ReactifyViteDecorationPriorToSetup } from './support.js'
 
 export const hot = Symbol('hotModuleReplacementProxy')
 
@@ -113,6 +113,25 @@ export async function setup(
     },
     appType: 'custom',
   })
+
+  // Ensure all server environments are accessible via import.meta.viteRsc
+  // by wrapping the RSC plugin's cross-environment import function.
+  // The RSC plugin's configureServer sets __VITE_ENVIRONMENT_RUNNER_IMPORT__
+  // with an isRunnableDevEnvironment check that may fail for environments
+  // created by other plugins. We wrap it to create a module runner on demand.
+  if (globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__) {
+    const originalImport = globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__
+    globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__ = async (environmentName: string, id: string) => {
+      const env = reactifyViteDecoration.devServer!.environments[environmentName]
+      if (!env) throw new Error(`[reactify] unknown environment '${environmentName}'`)
+      if (isRunnableDevEnvironment(env)) {
+        return env.runner.import(id)
+      }
+      // Create a module runner for non-runnable environments
+      const runner = createServerModuleRunner(env)
+      return runner.import(id)
+    }
+  }
   // Connect.Server implements the middleware handler interface
   reactifyViteDecoration.scope.use(
     reactifyViteDecoration.devServer.middlewares as unknown as MiddieHandler,
