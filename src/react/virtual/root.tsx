@@ -32,7 +32,7 @@ function DefaultLayout({ children }: { children: ReactNode }) {
 }
 
 interface AppRouteProps {
-  route: Record<string, any> | null
+  route: Record<string, unknown> | null
   params: Record<string, string>
   children: ReactNode
 }

@@ -28,7 +28,7 @@ interface RscPayload {
  * Tries the Vite client root first, falls back to a hardcoded template.
  */
 function loadHtmlTemplate(): string {
-  const isDev = (import.meta as Record<string, any>).env?.DEV
+  const isDev = import.meta.env.DEV
   const candidates = isDev
     ? [
         join(process.cwd(), 'client', 'index.html'),
@@ -127,7 +127,7 @@ export async function generateHTML(
   try {
     const clone = serverResponse.clone()
     rscPayloadScripts = await readRSCPayload(clone.body!)
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[ssr-entry] Failed to read RSC payload', err)
   }
 
@@ -135,9 +135,8 @@ export async function generateHTML(
   const indexHtml = loadHtmlTemplate()
   const [templateBefore, templateAfter] = indexHtml.split(el)
 
-  const bootstrapScriptContent = await (
-    import.meta as Record<string, any>
-  ).viteRsc.loadBootstrapScriptContent('index')
+  const bootstrapScriptContent =
+    await import.meta.viteRsc.loadBootstrapScriptContent('index')
 
   // Read the RSC payload and extract the matched route element
   const rscPayload = await createFromReadableStream<RscPayload>(serverResponse.body!)
