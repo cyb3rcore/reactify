@@ -16,11 +16,11 @@ import {
   decodeFormState,
 } from '@vitejs/plugin-rsc/rsc'
 import { createElement, type ComponentType, type ReactNode } from 'react'
-import { matchRoute } from '../router'
-import { getContext } from '../rsc-context'
-import type { RscAttachedRequest } from '../rsc-handler'
+import { matchRoute } from '../router.js'
+import { getContext } from '../rsc-context.js'
+import type { RscAttachedRequest } from '../rsc-handler.js'
 import routesManifest from '$app/routes.js'
-import ValtioHydrator from '$app/valtio-hydrator.jsx'
+import ValtioHydrator from '$app/valtio-hydrator.js'
 
 /**
  * URL suffix to differentiate RSC requests from SSR requests.
@@ -413,7 +413,7 @@ async function handler(request: Request): Promise<Response> {
 
     // Delegate to SSR environment for full document (HTML) requests
     const ssrEntry = await import.meta.viteRsc.import<{ generateHTML: (request: Request, rscResponse: Response) => Promise<Response> }>(
-      './ssr-entry.jsx',
+      './ssr-entry.js',
       { environment: 'ssr' },
     )
     const htmlResult = await ssrEntry.generateHTML(request, rscResponse.clone())

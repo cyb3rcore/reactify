@@ -27,6 +27,10 @@ function buildVirtualModuleList(): string[] {
     'context.ts',
     'core.tsx',
     'index.ts',
+    'rsc-entry.tsx',
+    'ssr-entry.tsx',
+    'rsc-content.tsx',
+    'valtio-hydrator.tsx',
   ]
 
   if (process.env.NODE_ENV !== 'test') {

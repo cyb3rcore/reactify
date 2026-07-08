@@ -9,13 +9,13 @@ function createClientEnvironment(dev: boolean, outDir: string) {
   }
 }
 
-function createSSREnvironment(dev: boolean, outDir: string, clientModule: string) {
+function createSSREnvironment(isDev: boolean, outDir: string, clientModule: string) {
   return {
     build: {
       outDir: `${outDir}/server`,
       ssr: true,
-      minify: !dev,
-      sourcemap: dev,
+      minify: !isDev,
+      sourcemap: isDev,
       emitAssets: true,
       rollupOptions: {
         input: {

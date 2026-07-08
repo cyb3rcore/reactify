@@ -189,8 +189,10 @@ export async function generateHTML(
     }),
   )
 
+  const htmlHeaders = new Headers(serverResponse.headers)
+  htmlHeaders.set('Content-Type', 'text/html')
   return new Response(stream, {
     status: serverResponse.status,
-    headers: serverResponse.headers,
+    headers: htmlHeaders,
   })
 }
