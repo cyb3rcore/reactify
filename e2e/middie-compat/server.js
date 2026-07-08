@@ -2,11 +2,11 @@ import Fastify from 'fastify'
 import FastifyVite from '@fastify/vite'
 import middie from '@fastify/middie'
 
-// Test scenario 1: Register middie BEFORE fastify-vite
+// Test scenario 1: Register middie BEFORE reactify-vite
 export async function mainMiddieFirst(dev) {
   const server = Fastify()
 
-  // Register middie first - fastify-vite should detect and skip its own registration
+  // Register middie first - reactify-vite should detect and skip its own registration
   await server.register(middie)
 
   await server.register(FastifyVite, {
@@ -33,7 +33,7 @@ export async function mainMiddieFirst(dev) {
   return server
 }
 
-// Test scenario 2: Use server.use() after fastify-vite is registered
+// Test scenario 2: Use server.use() after reactify-vite is registered
 // This tests whether middie's decorator is available on the root server
 export async function mainViteFirst(dev) {
   const server = Fastify()

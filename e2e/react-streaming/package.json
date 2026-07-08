@@ -1,5 +1,5 @@
 {
-  "name": "@fastify-vite/e2e-react-streaming",
+  "name": "@reactify/e2e-react-streaming",
   "private": true,
   "type": "module",
   "scripts": {

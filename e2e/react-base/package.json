@@ -1,5 +1,5 @@
 {
-  "name": "@fastify-vite/e2e-react-base",
+  "name": "@reactify/e2e-react-base",
   "private": true,
   "type": "module",
   "scripts": {

@@ -1,5 +1,5 @@
 {
-  "name": "@fastify-vite/e2e-react-vanilla-ts-src",
+  "name": "@reactify/e2e-react-vanilla-spa",
   "private": true,
   "type": "module",
   "scripts": {
