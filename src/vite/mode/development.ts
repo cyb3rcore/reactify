@@ -119,6 +119,8 @@ export async function setup(
   // The RSC plugin's configureServer sets __VITE_ENVIRONMENT_RUNNER_IMPORT__
   // with an isRunnableDevEnvironment check that may fail for environments
   // created by other plugins. We wrap it to create a module runner on demand.
+  // Store fallback runners keyed by environment name to avoid creating new ones per call
+  const fallbackRunners = new Map<string, ReturnType<typeof createServerModuleRunner>>()
   if (globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__) {
     const originalImport = globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__
     globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__ = async (environmentName: string, id: string) => {
@@ -127,8 +129,12 @@ export async function setup(
       if (isRunnableDevEnvironment(env)) {
         return env.runner.import(id)
       }
-      // Create a module runner for non-runnable environments
-      const runner = createServerModuleRunner(env)
+      // Use/create a fallback runner for non-runnable environments
+      let runner = fallbackRunners.get(environmentName)
+      if (!runner || runner.isClosed()) {
+        runner = createServerModuleRunner(env)
+        fallbackRunners.set(environmentName, runner)
+      }
       return runner.import(id)
     }
   }
@@ -205,6 +211,10 @@ export async function setup(
         Object.values(reactifyViteDecoration.runners).map((runner) => runner.close()),
       )
     }
+    // Close all fallback runners created for non-runnable environments
+    await Promise.all(
+      Array.from(fallbackRunners.values()).map((runner) => runner.close()),
+    )
     await reactifyViteDecoration.devServer!.close()
   })
 
