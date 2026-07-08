@@ -46,6 +46,10 @@ export async function prepareClient(
     const { default: create } = await (client.create as unknown as Promise<{ default: unknown }>)
     client.create = create as unknown as (...args: never[]) => unknown
   }
+  // Attach the RSC handler from the RSC environment entry (rsc-entry.tsx)
+  if (entries.rsc) {
+    client.rscHandler = entries.rsc
+  }
   return client
 }
 
@@ -224,6 +228,23 @@ export async function createRoute(
     handler,
     ...route,
   })
+
+  // Register companion route for RSC _.rsc suffix requests.
+  // Client-side code constructs action/fetch URLs as `${pathname}_.rsc`.
+  // Without this companion route, Fastify returns 404 for these requests.
+  if (route.rsc) {
+    ;(scope as unknown as {
+      route(opts: Record<string, unknown>): void
+      get(path: string, opts: Record<string, unknown>): void
+    }).route({
+      url: routePath + '_.rsc',
+      method: ['GET', 'POST'],
+      errorHandler,
+      handler,
+      onRequest: route.onRequest,
+      preHandler: route.preHandler,
+    })
+  }
 
   if (route.getData) {
     // If getData is provided, register JSON endpoint for it
