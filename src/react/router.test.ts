@@ -20,6 +20,12 @@ describe('matchPath', () => {
   it('decodes URI components', () => {
     expect(matchPath('/users/[id]', '/users/hello%20world')).toEqual({ id: 'hello world' })
   })
+
+  it('falls back to raw string on malformed percent-encoding', () => {
+    const result = matchPath('/users/[id]', '/users/%GG')
+    expect(result).toBeDefined()
+    expect(result!.id).toBe('%GG')
+  })
   it('matches nested params', () => {
     expect(matchPath('/posts/[id]/comments/[commentId]', '/posts/1/comments/2')).toEqual({
       id: '1', commentId: '2',
