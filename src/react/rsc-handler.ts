@@ -9,6 +9,7 @@ export interface RscAttachedRequest extends Request {
   __valtioState?: Record<string, unknown> | null
   __server?: unknown
   __req?: FastifyRequest
+  __reply?: FastifyReply
 }
 
 /**
@@ -48,6 +49,7 @@ export async function convertRequest(
     (req.route?.state as Record<string, unknown> | undefined) ?? null
   ;(request as RscAttachedRequest).__server = req.route?.server ?? null
   ;(request as RscAttachedRequest).__req = req
+  ;(request as RscAttachedRequest).__reply = (req.route?.reply as FastifyReply | undefined) ?? undefined
   return request
 }
 

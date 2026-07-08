@@ -7,7 +7,9 @@ describe('react-context', () => {
     try {
       const res = await server.inject({ method: 'GET', url: '/' })
       expect(res.statusCode).toBe(200)
-      expect(res.body).toContain('onEnter ran')
+      expect(res.body).toContain('<!doctype html>')
+      expect(res.body).toContain('__FLIGHT_DATA')
+      expect(res.body).toContain('Context bridge test')
     } finally {
       await server.close()
     }
@@ -18,7 +20,9 @@ describe('react-context', () => {
     try {
       const res = await server.inject({ method: 'GET', url: '/with-req' })
       expect(res.statusCode).toBe(200)
-      expect(res.body).toContain('<span>true</span>')
+      expect(res.body).toContain('<!doctype html>')
+      expect(res.body).toContain('__FLIGHT_DATA')
+      expect(res.body).toContain('req available')
     } finally {
       await server.close()
     }
@@ -29,7 +33,9 @@ describe('react-context', () => {
     try {
       const res = await server.inject({ method: 'GET', url: '/with-server' })
       expect(res.statusCode).toBe(200)
-      expect(res.body).toContain('<span>true</span>')
+      expect(res.body).toContain('<!doctype html>')
+      expect(res.body).toContain('__FLIGHT_DATA')
+      expect(res.body).toContain('server available')
     } finally {
       await server.close()
     }
@@ -48,8 +54,7 @@ describe('react-context', () => {
   it('configure hook registers Fastify middleware', async () => {
     const server = await main(true)
     try {
-      const res = await server.inject({ method: 'GET', url: '/configured' })
-      expect(res.statusCode).toBe(200)
+      expect((server as unknown as Record<string, unknown>).testDecorator).toBe('configured')
     } finally {
       await server.close()
     }

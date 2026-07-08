@@ -6,7 +6,9 @@
     "fastify": "^5.8.5",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "reactify": "file:../../"
+    "reactify": "file:../../",
+    "@vitejs/plugin-rsc": "^0.5.27",
+    "rsc-html-stream": "^0.0.7"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.1",
