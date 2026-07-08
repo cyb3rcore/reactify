@@ -1,14 +1,10 @@
-// @ts-nocheck
-import { UnheadProvider as ClientUnheadProvider } from '@unhead/react/client'
-import { UnheadProvider as ServerUnheadProvider } from '@unhead/react/server?server'
+import { RouteProvider } from './core'
+import { RouteRenderer } from './root'
 
-import Root from '$app/root.jsx'
-
-export default function create({ url, ...serverInit }) {
-  const UnheadProvider = import.meta.env.SSR ? ServerUnheadProvider : ClientUnheadProvider
+export default function create({ url, routes, routeMap, ctxHydration }: Record<string, any>) {
   return (
-    <UnheadProvider value={serverInit.ctxHydration.useHead}>
-      <Root url={url} {...serverInit} />
-    </UnheadProvider>
+    <RouteProvider routes={routes} location={url} ctxHydration={ctxHydration} routeMap={routeMap}>
+      <RouteRenderer />
+    </RouteProvider>
   )
 }

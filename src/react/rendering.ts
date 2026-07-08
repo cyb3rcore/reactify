@@ -5,10 +5,13 @@ import { Readable } from 'node:stream'
 import { Minipass } from 'minipass'
 // React 18's preferred server-side rendering function,
 // which enables the combination of React.lazy() and Suspense
-import { renderToPipeableStream } from 'react-dom/server'
+import { createElement } from 'react'
+import { renderToPipeableStream, renderToReadableStream } from 'react-dom/server'
 import * as devalue from 'devalue'
 import { transformHtmlTemplate } from '@unhead/react/server'
 import { createHtmlTemplates } from './templating.js'
+import { RouteProvider } from './virtual/core.js'
+import { RouteRenderer } from './virtual/root.js'
 
 // Helper function to get an AsyncIterable (via PassThrough)
 // from the renderToPipeableStream() onShellReady event
@@ -55,6 +58,19 @@ export async function createRenderFunction({ routes, create }) {
     }
     return createResponse(this.request, routes, routeMap, create)
   }
+}
+
+/**
+ * Standalone SSR render using RouteProvider + RouteRenderer.
+ */
+export async function renderSSR(url: string, routes: any[], options?: { bootstrapScripts?: string[] }) {
+  const stream = await renderToReadableStream(
+    createElement(RouteProvider, { routes, location: url },
+      createElement(RouteRenderer),
+    ),
+    { bootstrapScripts: options?.bootstrapScripts ?? ['/assets/client.js'] },
+  )
+  return stream
 }
 
 async function createStreamingResponse(req, routes) {
