@@ -11,7 +11,7 @@ vi.mock('vite', async (importOriginal) => {
 })
 
 import { createServerModuleRunner } from 'vite'
-import { loadEntries } from './development.ts'
+import { loadEntries } from './development.js'
 
 describe('loadEntries', () => {
   beforeEach(() => {

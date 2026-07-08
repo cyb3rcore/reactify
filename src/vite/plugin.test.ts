@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { sep } from 'node:path'
-import { findCommonPath } from './plugin.ts'
+import { findCommonPath } from './plugin.js'
 
 describe('findCommonPath', () => {
   it('should throw an error for empty input', () => {

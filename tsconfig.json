@@ -1,22 +1,20 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "allowImportingTsExtensions": true,
     "checkJs": false,
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": false,
     "jsx": "react-jsx",
     "lib": ["ES2020", "DOM"],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "strict": true,
     "outDir": "dist",
     "paths": {
       "$app/*": ["./src/react/virtual/*"],
       "#runtime/*": ["./src/react/*"]
     },
-    "rewriteRelativeImportExtensions": true,
     "rootDir": "src",
     "skipLibCheck": true,
     "sourceMap": true,

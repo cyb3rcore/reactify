@@ -1,5 +1,5 @@
-import { RouteProvider, type RouteDef } from './core'
-import { RouteRenderer } from './root'
+import { RouteProvider, type RouteDef } from './core.js'
+import { RouteRenderer } from './root.js'
 
 interface CreateAppOptions {
   url: string

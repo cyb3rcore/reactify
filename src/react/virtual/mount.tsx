@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { hydrateRoot } from 'react-dom/client'
-import { RouteProvider, type RouteDef } from './core'
-import { RouteRenderer } from './root'
+import { RouteProvider, type RouteDef } from './core.js'
+import { RouteRenderer } from './root.js'
 
 // Detect RSC flight data for server component hydration
 const flightData =

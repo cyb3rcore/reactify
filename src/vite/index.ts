@@ -9,25 +9,25 @@ import type {
 import type { ViteDevServer } from 'vite'
 import type { ModuleRunner } from 'vite/module-runner'
 import fp from 'fastify-plugin'
-import { configure } from './config.ts'
+import { configure } from './config.js'
 import { hasIterableRoutes, type ReactifyViteDecorationPriorToSetup } from './mode/support.js'
-import type { ClientEntries, ClientModule } from './types/client.ts'
-import type { HtmlTemplateFunction } from './types/html.ts'
+import type { ClientEntries, ClientModule } from './types/client.js'
+import type { HtmlTemplateFunction } from './types/html.js'
 import type {
   DevRuntimeConfig,
   ReactifyViteOptions,
   ProdRuntimeConfig,
   RuntimeConfig,
-} from './types/options.ts'
-import type { RendererOption } from './types/renderer.ts'
+} from './types/options.js'
+import type { RendererOption } from './types/renderer.js'
 import type {
   ReplyDotHtmlFunction,
   ReplyDotRenderContext,
   ReplyDotRenderFunction,
   ReplyDotRenderResult,
-} from './types/reply.ts'
-import type { ClientRouteArgs, CreateRouteArgs, RouteDefinition } from './types/route.ts'
-import type { SerializableViteConfig } from './types/vite-configs.ts'
+} from './types/reply.js'
+import type { ClientRouteArgs, CreateRouteArgs, RouteDefinition } from './types/route.js'
+import type { SerializableViteConfig } from './types/vite-configs.js'
 
 // Re-export types for consumers
 export type {
@@ -113,10 +113,10 @@ class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
     // Determine which setup function to use
     if (this.runtimeConfig.dev) {
       // Boots Vite's development server and ensures hot reload
-      this[kMode] = (await import('./mode/development.ts')) as ModeModule
+      this[kMode] = (await import('./mode/development.js')) as ModeModule
     } else {
       // Assumes presence of and uses production bundled distribution
-      this[kMode] = (await import('./mode/production.ts')) as ModeModule
+      this[kMode] = (await import('./mode/production.js')) as ModeModule
     }
 
     // Get client module based on the Vite server bundle

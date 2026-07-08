@@ -1,9 +1,9 @@
 import type { FastifyInstance, RouteHandlerMethod, RouteOptions } from 'fastify'
-import { createHtmlTemplateFunction } from '../html.ts'
-import type { ClientEntries } from '../types/client.ts'
-import type { RuntimeConfig, IncompleteRuntimeConfig } from '../types/options.ts'
-import type { ReplyDotHtmlFunction, ReplyDotRenderResult } from '../types/reply.ts'
-import type { ClientRouteArgs, CreateRouteArgs } from '../types/route.ts'
+import { createHtmlTemplateFunction } from '../html.js'
+import type { ClientEntries } from '../types/client.js'
+import type { RuntimeConfig, IncompleteRuntimeConfig } from '../types/options.js'
+import type { ReplyDotHtmlFunction, ReplyDotRenderResult } from '../types/reply.js'
+import type { ClientRouteArgs, CreateRouteArgs } from '../types/route.js'
 
 /** Defaults: all functions filled, but not root/viteConfig */
 type ConfigDefaults = Omit<IncompleteRuntimeConfig, 'root' | 'viteConfig'>

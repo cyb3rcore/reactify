@@ -7,7 +7,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react'
-import { matchRoute, parseLocation, type ParsedLocation } from '../router'
+import { matchRoute, parseLocation, type ParsedLocation } from '../router.js'
 
 const isServer = typeof window === 'undefined'
 const routeMapRef: { current: Record<string, unknown> } = { current: {} }

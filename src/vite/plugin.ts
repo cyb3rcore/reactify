@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises'
 import getDeepMergeFunction from '@fastify/deepmerge'
 import { packageDirectory } from 'package-directory'
 import type { Plugin, ResolvedConfig, UserConfig } from 'vite'
-import type { SerializableViteConfig, ViteFastifyConfig } from './types/vite-configs.ts'
+import type { SerializableViteConfig, ViteFastifyConfig } from './types/vite-configs.js'
 
 export interface ViteFastifyPluginOptions {
   /**
@@ -35,9 +35,9 @@ export function viteFastify(options: ViteFastifyPluginOptions = {}): Plugin {
       const isDevMode = mode === 'development'
       const outDir = customOutDir ?? 'dist'
       const deepMerge = getDeepMergeFunction()
-      const { resolveClientModule } = await import('./config/paths.ts')
+      const { resolveClientModule } = await import('./config/paths.js')
       const { createSSREnvironment, createClientEnvironment } =
-        await import('./config/environments.ts')
+        await import('./config/environments.js')
 
       if (!rawConfig.environments) {
         rawConfig.environments = {}

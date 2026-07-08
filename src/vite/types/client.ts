@@ -1,4 +1,4 @@
-import type { RouteDefinition } from './route.ts'
+import type { RouteDefinition } from './route.js'
 
 export interface ClientModule {
   create?: (...args: never[]) => unknown

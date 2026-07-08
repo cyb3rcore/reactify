@@ -2,12 +2,12 @@ import type { FastifyStaticOptions } from '@fastify/static'
 import type { FastifyInstance, RouteHandlerMethod, RouteOptions } from 'fastify'
 import type { ResolvedConfig } from 'vite'
 
-import type { ClientEntries, ClientModule } from './client.ts'
-import type { HtmlTemplateFunction } from './html.ts'
-import type { RendererOption } from './renderer.ts'
-import type { ReplyDotHtmlFunction, ReplyDotRenderFunction } from './reply.ts'
-import type { ClientRouteArgs, CreateRouteArgs } from './route.ts'
-import type { SerializableViteConfig } from './vite-configs.ts'
+import type { ClientEntries, ClientModule } from './client.js'
+import type { HtmlTemplateFunction } from './html.js'
+import type { RendererOption } from './renderer.js'
+import type { ReplyDotHtmlFunction, ReplyDotRenderFunction } from './reply.js'
+import type { ClientRouteArgs, CreateRouteArgs } from './route.js'
+import type { SerializableViteConfig } from './vite-configs.js'
 
 /** Keys managed internally by reactify — not overridable via fastifyStaticOptions */
 type ManagedStaticKeys = 'root' | 'prefix' | 'serve'

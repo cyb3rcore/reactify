@@ -2,8 +2,8 @@ import { existsSync, lstatSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join } from 'node:path'
 import type { ResolvedConfig } from 'vite'
-import { getApplicationRootDir } from './paths.ts'
-import type { SerializableViteConfig } from '../types/vite-configs.ts'
+import { getApplicationRootDir } from './paths.js'
+import type { SerializableViteConfig } from '../types/vite-configs.js'
 
 const VITE_CONFIG_JSON = 'vite.config.json'
 
