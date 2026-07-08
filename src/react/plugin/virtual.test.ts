@@ -10,9 +10,9 @@ describe('virtual module resolution', () => {
 
     expect(resolved).toBe('/$app/layouts.ts')
 
-    const [, virtual] = resolved.split(prefix)
+    const [, virtual] = resolved!.split(prefix)
     expect(virtual).toBe('layouts.ts')
-    expect(loadVirtualModule(virtual).code).toContain("import.meta.glob('/layouts/*.{jsx,tsx}')")
+    expect(loadVirtualModule(virtual)!.code).toContain("import.meta.glob('/layouts/*.{jsx,tsx}')")
   })
 
   it('resolveId leaves project overrides as real files', async () => {

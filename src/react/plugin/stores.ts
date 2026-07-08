@@ -1,6 +1,6 @@
-export function generateStores(keys) {
+export function generateStores(keys: string[]) {
   let code = `
-import { useRouteContext } from '@fastify/react/client'
+import { useRouteContext } from 'reactify/client'
 
 function storeGetter (proxy, prop) {
   if (!proxy.context) {

@@ -10,7 +10,7 @@
     "lib": ["ES2020", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "strict": false,
+    "strict": true,
     "outDir": "dist",
     "paths": {
       "$app/*": ["./src/react/virtual/*"],

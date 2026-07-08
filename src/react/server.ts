@@ -1,123 +1,114 @@
-// @ts-nocheck
-// Otherwise we get a ReferenceError, but since
-// this function is only ran once, there's no overhead
-class Routes extends Array {
-  toJSON() {
-    return this.map((route) => {
-      return {
-        id: route.id,
-        path: route.path,
-        name: route.name,
-        layout: route.layout,
-        getData: !!route.getData,
-        getMeta: !!route.getMeta,
-        onEnter: !!route.onEnter,
-      }
-    })
+import type { FastifyInstance } from 'fastify'
+
+class Routes extends Array<Record<string, unknown>> {
+  toJSON(): Array<Record<string, unknown>> {
+    return this.map((route) => ({
+      id: route.id,
+      path: route.path,
+      name: route.name,
+      layout: route.layout,
+      getData: !!route.getData,
+      getMeta: !!route.getMeta,
+      onEnter: !!route.onEnter,
+    }))
   }
 }
 
-export function prepareServer(server) {
-  let url
+export function prepareServer(server: FastifyInstance): void {
+  let url: string | undefined
   server.decorate('serverURL', { getter: () => url })
   server.addHook('onListen', () => {
-    const { port, address, family } = server.server.address()
-    const protocol = server.https ? 'https' : 'http'
-    if (family === 'IPv6') {
-      url = `${protocol}://[${address}]:${port}`
-    } else {
-      url = `${protocol}://${address}:${port}`
+    const addr = server.server.address()
+    if (!addr) return
+    const protocol =
+      (server as unknown as Record<string, unknown>).https ? 'https' : 'http'
+    if (typeof addr === 'object') {
+      const { address, port } = addr as { address: string; port: number }
+      url = addr.family === 'IPv6'
+        ? `${protocol}://[${address}]:${port}`
+        : `${protocol}://${address}:${port}`
     }
   })
   server.decorateRequest('fetchMap', null)
-  server.addHook('onRequest', (req, _, done) => {
-    req.fetchMap = new Map()
+  server.addHook('onRequest', (req, _reply, done) => {
+    ;(req as unknown as Record<string, unknown>).fetchMap = new Map()
     done()
   })
-  server.addHook('onResponse', (req, _, done) => {
-    req.fetchMap = undefined
+  server.addHook('onResponse', (req, _reply, done) => {
+    ;(req as unknown as Record<string, unknown>).fetchMap = undefined
     done()
   })
 }
 
-export async function createRoutes(fromPromise, { param } = { param: /\[([.\w]+\+?)\]/ }) {
+export async function createRoutes(
+  fromPromise: Promise<{ default: Record<string, unknown> | Array<Record<string, unknown>> }>,
+  { param } = { param: /\[([.\w]+\+?)\]/ },
+): Promise<Routes> {
   const { default: from } = await fromPromise
-  const importPaths = Object.keys(from)
-  const promises = []
+  const promises: Promise<Record<string, unknown>>[] = []
   if (Array.isArray(from)) {
     for (const routeDef of from) {
       promises.push(
-        getRouteModule(routeDef.path, routeDef.component).then((routeModule) => {
-          return {
-            id: routeDef.path,
-            name: routeDef.path ?? routeModule.path,
-            path: routeDef.path ?? routeModule.path,
-            ...routeModule,
-          }
-        }),
+        getRouteModule(
+          (routeDef as Record<string, unknown>).path as string,
+          (routeDef as Record<string, unknown>).component as () => Promise<unknown>,
+        ).then((routeModule) => ({
+          id: (routeDef as Record<string, unknown>).path,
+          name: (routeDef as Record<string, unknown>).path ?? routeModule.path,
+          path: (routeDef as Record<string, unknown>).path ?? routeModule.path,
+          ...routeModule,
+        })),
       )
     }
   } else {
-    // Ensure that static routes have precedence over the dynamic ones
-    for (const path of importPaths.sort((a, b) => (a > b ? -1 : 1))) {
+    for (const path of Object.keys(from).sort((a, b) => (a > b ? -1 : 1))) {
       promises.push(
-        getRouteModule(path, from[path]).then((routeModule) => {
-          const route = {
-            id: path,
-            layout: routeModule.layout,
-            name: path
-              // Remove /pages and .vue extension
-              .slice(6, -4)
-              // Remove params
-              .replace(param, '')
-              // Remove leading and trailing slashes
-              .replace(/^\/*|\/*$/g, '')
-              // Replace slashes with underscores
-              .replace(/\//g, '_'),
-            path:
-              routeModule.path ??
+        getRouteModule(path, (from as Record<string, unknown>)[path]).then(
+          (routeModule) => {
+            const routePath =
+              (routeModule.path as string) ??
               path
-                // Remove /pages and .vue extension
                 .slice(6, -4)
-                // Replace [id] with :id and [slug+] with :slug+
                 .replace(param, (_, m) => `:${m}`)
-                .replace(/:\w+\+/, (_, m) => `*`)
-                // Replace '/index' with '/'
+                .replace(/:\w+\+/, () => `*`)
                 .replace(/\/index$/, '/')
-                // Remove trailing slashs
-                .replace(/(.+)\/+$/, (...m) => m[1]),
-            ...routeModule,
-          }
+                .replace(/(.+)\/+$/, (...m) => m[1])
+            const routeName: string =
+              (routeModule.name as string) ??
+              path
+                .slice(6, -4)
+                .replace(param, '')
+                .replace(/^\/*|\/*$/g, '')
+                .replace(/\//g, '_')
 
-          if (route.name === '') {
-            route.name = 'catch-all'
-          }
-
-          return route
-        }),
+            return {
+              id: path,
+              name: routeName || 'catch-all',
+              path: routePath,
+              layout: routeModule.layout,
+              ...routeModule,
+            }
+          },
+        ),
       )
     }
   }
   return new Routes(...(await Promise.all(promises)))
 }
 
-function getRouteModuleExports(routeModule) {
+function getRouteModuleExports(
+  routeModule: Record<string, unknown>,
+): Record<string, unknown> {
   return {
-    // The Route component (default export)
     component: routeModule.default,
-    // The Layout Route component
     layout: routeModule.layout,
-    // Route-level hooks
     getData: routeModule.getData,
     getMeta: routeModule.getMeta,
     onEnter: routeModule.onEnter,
-    // Other Route-level settings
     streaming: routeModule.streaming,
     clientOnly: routeModule.clientOnly,
     serverOnly: routeModule.serverOnly,
-    // Server configure function
     configure: routeModule.configure,
-    // Route-level Fastify hooks
     onRequest: routeModule.onRequest ?? undefined,
     preParsing: routeModule.preParsing ?? undefined,
     preValidation: routeModule.preValidation ?? undefined,
@@ -131,10 +122,13 @@ function getRouteModuleExports(routeModule) {
   }
 }
 
-async function getRouteModule(path, routeModuleInput) {
+async function getRouteModule(
+  _path: string,
+  routeModuleInput: unknown,
+): Promise<Record<string, unknown>> {
   if (typeof routeModuleInput === 'function') {
     const routeModule = await routeModuleInput()
-    return getRouteModuleExports(routeModule)
+    return getRouteModuleExports(routeModule as Record<string, unknown>)
   }
-  return getRouteModuleExports(routeModuleInput)
+  return getRouteModuleExports(routeModuleInput as Record<string, unknown>)
 }

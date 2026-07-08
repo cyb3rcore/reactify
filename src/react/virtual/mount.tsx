@@ -1,17 +1,16 @@
 import { StrictMode } from 'react'
 import { hydrateRoot } from 'react-dom/client'
-import { RouteProvider } from './core'
+import { RouteProvider, type RouteDef } from './core'
 import { RouteRenderer } from './root'
 
 // Detect RSC flight data for server component hydration
 const flightData =
-  typeof window !== 'undefined' &&
-  (window as any).__FLIGHT_DATA
+  typeof window !== 'undefined' && window.__FLIGHT_DATA
 
 // Mount entry point. The app entry point (create.tsx or similar) assembles
 // the RouteProvider + RouteRenderer with the actual route table.
 // This file exports the hydration logic for consumer applications.
-export function mount(routes: any[], rootId = 'root') {
+export function mount(routes: RouteDef[], rootId = 'root') {
   if (flightData) {
     // RSC hydration path — skip traditional routing hydration
     return
