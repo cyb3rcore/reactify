@@ -5,7 +5,7 @@
 export async function createFromFetch(
   _fetchPromise: Promise<Response>,
   _options?: { temporaryReferences?: unknown },
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   return { matches: [], returnValue: {} }
 }
 

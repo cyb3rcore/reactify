@@ -65,8 +65,10 @@ declare module '@vitejs/plugin-rsc/browser' {
     options?: EncodeReplyOptions,
   ) => Promise<string | FormData>
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- matches upstream @vitejs/plugin-rsc/browser source signature
   export const createServerReference: (...args: any[]) => unknown
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- matches upstream @vitejs/plugin-rsc/browser source signature
   export function callServer(...args: any[]): any
 
   export function setServerCallback(fn: CallServerCallback): void

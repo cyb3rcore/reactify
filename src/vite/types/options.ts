@@ -33,7 +33,7 @@ export interface ReactifyViteOptions extends Partial<RendererOption> {
   distDir?: string
   /**
    * URL prefix for static asset routes in production mode.
-   * Use this when mounting @fastify/vite under a path prefix.
+   * Use this when mounting reactify under a path prefix.
    */
   prefix?: string
   /**

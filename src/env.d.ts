@@ -42,12 +42,39 @@ declare module '@unhead/react/server?server' {
 
 // RouteContext has a static extend() method added after class definition
 declare module './react/context.js' {
-  const RouteContext: {
-    new (...args: any[]): any
-    create(server: any, req: any, reply: any, route: any, contextInit?: any): Promise<any>
-    extend(initial: Record<string, any>): void
-    prototype: any
+  import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+
+  interface _RouteDef {
+    path: string
+    data?: Record<string, unknown> | null
+    layout?: string
+    getMeta?: boolean | ((ctx: unknown) => Promise<Record<string, unknown>>)
+    getData?: boolean | ((ctx: unknown) => Promise<Record<string, unknown>>)
+    onEnter?: boolean | ((ctx: unknown) => Promise<Record<string, unknown>>)
+    streaming?: boolean
+    clientOnly?: boolean
+    serverOnly?: boolean
+    [key: string]: unknown
   }
+
+  interface _ContextInit {
+    state?: () => Record<string, unknown>
+    default?: (ctx: RouteContext) => Promise<void>
+    [key: string]: unknown
+  }
+
+  class RouteContext {
+    constructor(server: FastifyInstance, req: FastifyRequest, reply: FastifyReply, route: _RouteDef)
+    static create(
+      server: FastifyInstance,
+      req: FastifyRequest,
+      reply: FastifyReply,
+      route: _RouteDef,
+      contextInit?: _ContextInit,
+    ): Promise<RouteContext>
+    static extend(initial: Record<string, unknown>): void
+  }
+
   export default RouteContext
 }
 
