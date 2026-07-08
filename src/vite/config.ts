@@ -1,11 +1,11 @@
 import { DefaultConfig } from './config/defaults.ts'
 import { resolveClientModule, resolveRoot } from './config/paths.ts'
 import { resolveDevViteConfig, resolveProdViteConfig } from './config/vite-config.ts'
-import type { FastifyViteOptions, RuntimeConfig, IncompleteRuntimeConfig } from './types/options.ts'
+import type { ReactifyViteOptions, RuntimeConfig, IncompleteRuntimeConfig } from './types/options.ts'
 
 let hasWarnedDeprecatedViteAlias = false
 
-export async function configure(options: FastifyViteOptions): Promise<RuntimeConfig> {
+export async function configure(options: ReactifyViteOptions): Promise<RuntimeConfig> {
   const defaultConfig = { ...DefaultConfig }
   const { dev } = options
   const root = resolveRoot(options.root)

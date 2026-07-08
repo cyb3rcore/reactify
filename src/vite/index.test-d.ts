@@ -1,8 +1,8 @@
 import type { Server } from 'node:http'
 import Fastify, { type FastifyPluginCallback } from 'fastify'
 import { describe, expectTypeOf, it } from 'vitest'
-import * as FastifyViteAll from '../index.js'
-import FastifyVite, { fastifyVite, type FastifyViteOptions } from '../index.js'
+import * as ReactifyViteAll from '../index.js'
+import ReactifyVite, { reactifyVite, type ReactifyViteOptions } from '../index.js'
 
 const options = {
   root: process.cwd(),
@@ -34,19 +34,19 @@ const options = {
       return Promise.resolve(entries.ssr ?? null)
     },
   },
-} satisfies FastifyViteOptions
+} satisfies ReactifyViteOptions
 
 describe('test by options', () => {
   it('import default and named exports', () => {
-    expectTypeOf<FastifyPluginCallback<FastifyViteOptions, Server>>(FastifyVite)
-    expectTypeOf<FastifyPluginCallback<FastifyViteOptions, Server>>(FastifyViteAll.default)
-    expectTypeOf<FastifyPluginCallback<FastifyViteOptions>>(fastifyVite)
+    expectTypeOf<FastifyPluginCallback<ReactifyViteOptions, Server>>(ReactifyVite)
+    expectTypeOf<FastifyPluginCallback<ReactifyViteOptions, Server>>(ReactifyViteAll.default)
+    expectTypeOf<FastifyPluginCallback<ReactifyViteOptions>>(reactifyVite)
     expectTypeOf(options.createHtmlFunction).parameter(0).toEqualTypeOf('string')
   })
 })
 
 const app = Fastify()
-app.register(FastifyVite, {
+app.register(ReactifyVite, {
   root: process.cwd(),
   dev: true,
   spa: false,
@@ -54,7 +54,7 @@ app.register(FastifyVite, {
 app.vite.ready()
 
 // fastifyStaticOptions: accepts valid @fastify/static options
-app.register(FastifyVite, {
+app.register(ReactifyVite, {
   root: process.cwd(),
   fastifyStaticOptions: {
     preCompressed: true,
@@ -64,13 +64,13 @@ app.register(FastifyVite, {
 })
 
 // @ts-expect-error - root is managed internally and cannot be overridden
-app.register(FastifyVite, {
+app.register(ReactifyVite, {
   root: process.cwd(),
   fastifyStaticOptions: { root: '/bad' },
 })
 
 // @ts-expect-error - prefix is managed internally and cannot be overridden
-app.register(FastifyVite, {
+app.register(ReactifyVite, {
   root: process.cwd(),
   fastifyStaticOptions: { prefix: '/bad' },
 })

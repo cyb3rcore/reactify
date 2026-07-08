@@ -1,2 +1,2 @@
-export { default, fastifyVite } from './vite/index.js'
-export type { FastifyViteOptions } from './vite/index.js'
+export { default, reactifyVite } from './vite/index.js'
+export type { ReactifyViteOptions } from './vite/index.js'
