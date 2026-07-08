@@ -13,6 +13,7 @@ export interface RouteExports {
   clientOnly?: unknown
   serverOnly?: unknown
   configure?: unknown
+  rsc?: boolean
   onRequest?: unknown
   preParsing?: unknown
   preValidation?: unknown
