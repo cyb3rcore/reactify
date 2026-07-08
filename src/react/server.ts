@@ -39,7 +39,7 @@ class Routes extends Array<RouteRecord> {
       id: route.id,
       path: route.path,
       name: route.name,
-      layout: route.layout,
+      layout: !!route.layout,
       getData: !!route.getData,
       getMeta: !!route.getMeta,
       onEnter: !!route.onEnter,
