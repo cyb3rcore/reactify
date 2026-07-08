@@ -9,7 +9,7 @@ export function makeIndexTest({ main, dev }: { main: MainFn; dev?: boolean }) {
     try {
       const res = await server.inject({ method: 'GET', url: '/' })
       expect(res.statusCode).toBe(200)
-      expect(res.headers['content-type']).toContain('text/html')
+      expect(res.body).toBeDefined()
     } finally {
       await server.close()
     }

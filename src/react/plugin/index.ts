@@ -1,13 +1,13 @@
 import type { Plugin, ResolvedConfig } from 'vite'
-import viteFastify from '../../vite/plugin'
+import viteFastify from '../../vite/plugin.js'
 import {
   prefix,
   resolveId,
   loadSource,
   loadVirtualModule,
   createPlaceholderExports,
-} from './virtual'
-import { closeBundle } from './preload'
+} from './virtual.js'
+import { closeBundle } from './preload.js'
 
 interface PluginContext {
   root: string | null

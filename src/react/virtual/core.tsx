@@ -202,4 +202,5 @@ export function RouteProvider({
   return <RouterCtx.Provider value={ctx}>{children}</RouterCtx.Provider>
 }
 
-export { useServerAction } from './rsc-content'
+// useServerAction is available directly from './rsc-content' — not re-exported here
+// to keep RSC imports from contaminating the non-RSC module graph
