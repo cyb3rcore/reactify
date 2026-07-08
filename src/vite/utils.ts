@@ -1,5 +1,5 @@
-import { ensureConfigFile, ejectBlueprint } from './setup.ts'
-import { createHtmlTemplateFunction, removeHtmlModuleScripts } from './html.ts'
+import { ensureConfigFile, ejectBlueprint } from './setup.js'
+import { createHtmlTemplateFunction, removeHtmlModuleScripts } from './html.js'
 
 export { createHtmlTemplateFunction, ensureConfigFile, ejectBlueprint, removeHtmlModuleScripts }
 export default {

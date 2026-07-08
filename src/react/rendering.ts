@@ -3,11 +3,11 @@ import { createElement, type ReactNode } from 'react'
 import { renderToReadableStream } from 'react-dom/server'
 import * as devalue from 'devalue'
 import { transformHtmlTemplate } from '@unhead/react/server'
-import { createHtmlTemplates } from './templating'
-import { RouteProvider, type RouteDef } from './virtual/core'
-import { RouteRenderer } from './virtual/root'
+import { createHtmlTemplates } from './templating.js'
+import { RouteProvider, type RouteDef } from './virtual/core.js'
+import { RouteRenderer } from './virtual/root.js'
 import type { FastifyInstance, FastifyReply } from 'fastify'
-import type { RuntimeConfig } from '../vite/types/options'
+import type { RuntimeConfig } from '../vite/types/options.js'
 
 /**
  * Bridge react-dom's ReadableStream to Node.js Readable.

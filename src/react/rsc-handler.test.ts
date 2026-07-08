@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { describe, it, expect } from 'vitest'
-import { convertRequest, sendResponse } from './rsc-handler'
+import { convertRequest, sendResponse } from './rsc-handler.js'
 
 describe('convertRequest', () => {
   it('creates valid Fetch Request from Fastify req', async () => {

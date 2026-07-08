@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { useRouteContext } from './core'
+import { useRouteContext } from './core.js'
 
 interface RouteRendererProps {
   notFound?: React.ComponentType

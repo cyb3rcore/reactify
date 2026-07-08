@@ -1,7 +1,7 @@
 import type { Readable } from 'node:stream'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 
-import type { RouteDefinition } from './route.ts'
+import type { RouteDefinition } from './route.js'
 
 export interface ReplyDotRenderContext {
   app?: FastifyInstance

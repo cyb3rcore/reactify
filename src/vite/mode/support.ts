@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify'
 import type { ViteDevServer } from 'vite'
 import type { ModuleRunner } from 'vite/module-runner'
-import type { ClientEntries, ClientModule } from '../types/client.ts'
-import type { RuntimeConfig } from '../types/options.ts'
-import type { RouteDefinition } from '../types/route.ts'
+import type { ClientEntries, ClientModule } from '../types/client.js'
+import type { RuntimeConfig } from '../types/options.js'
+import type { RouteDefinition } from '../types/route.js'
 
 /** Shared setup context interface used by both dev and production setup functions */
 export interface ReactifyViteDecorationPriorToSetup {

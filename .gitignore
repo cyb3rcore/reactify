@@ -19,3 +19,4 @@ vite.config.ts.timestamp-*
 **/.vitepress/cache
 
 CLAUDE.md
+test-results/

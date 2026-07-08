@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createHtmlTemplateFunction, removeHtmlModuleScripts } from './html.ts'
+import { createHtmlTemplateFunction, removeHtmlModuleScripts } from './html.js'
 
 describe('createHtmlTemplateFunction', () => {
   it('replaces comments without spaces <!-- element -->', () => {

@@ -1,7 +1,7 @@
-import { DefaultConfig } from './config/defaults.ts'
-import { resolveClientModule, resolveRoot } from './config/paths.ts'
-import { resolveDevViteConfig, resolveProdViteConfig } from './config/vite-config.ts'
-import type { ReactifyViteOptions, RuntimeConfig, IncompleteRuntimeConfig } from './types/options.ts'
+import { DefaultConfig } from './config/defaults.js'
+import { resolveClientModule, resolveRoot } from './config/paths.js'
+import { resolveDevViteConfig, resolveProdViteConfig } from './config/vite-config.js'
+import type { ReactifyViteOptions, RuntimeConfig, IncompleteRuntimeConfig } from './types/options.js'
 
 let hasWarnedDeprecatedViteAlias = false
 

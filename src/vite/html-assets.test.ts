@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { transformAssetUrls } from './html-assets.ts'
+import { transformAssetUrls } from './html-assets.js'
 
 describe('transformAssetUrls', () => {
   it('transforms script src attributes', async () => {
