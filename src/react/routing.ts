@@ -1,33 +1,62 @@
 import { readFileSync } from 'node:fs'
 import { join, isAbsolute } from 'node:path'
-import type { FastifyRequest, FastifyReply } from 'fastify'
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import Youch from 'youch'
+import type { ClientModule, ClientEntries } from '../vite/types/client'
+import type { RuntimeConfig } from '../vite/types/options'
+import type { RouteDefinition } from '../vite/types/route'
+import type { Readable } from 'node:stream'
 import RouteContext from './context'
 import { createHtmlFunction } from './rendering'
 import { rscStore } from './rsc-context'
 
+/**
+ * Route metadata specific to the React renderer.
+ * Extends RouteDefinition with the React-specific lifecycle hooks
+ * that pages can export (getData, getMeta, onEnter, rsc, etc.).
+ */
+interface ReactRouteDef extends RouteDefinition {
+  getData?: boolean | ((ctx: Record<string, unknown>) => Promise<Record<string, unknown>>)
+  getMeta?: boolean | ((ctx: Record<string, unknown>) => Promise<Record<string, unknown>>)
+  onEnter?: boolean | ((ctx: Record<string, unknown>) => Promise<Record<string, unknown>>)
+  rsc?: boolean
+  configure?: (scope: FastifyInstance) => void | Promise<void>
+  id?: string
+  streaming?: boolean
+  clientOnly?: boolean
+  serverOnly?: boolean
+  method?: string | string[]
+}
+
+/**
+ * Resolve client-side module entries from the Vite SSR bundle.
+ * Awaits any pending promises on context, routes, and create — these
+ * can arrive as unresolved promises from dynamic imports.
+ */
 export async function prepareClient(
-  entries: Record<string, unknown>,
-  _: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const client = entries.ssr as Record<string, unknown>
+  entries: ClientEntries,
+  _scope?: FastifyInstance,
+  _config?: RuntimeConfig,
+): Promise<ClientModule> {
+  const client = entries.ssr!
   if ((client.context as unknown) instanceof Promise) {
     client.context = await (client.context as Promise<unknown>)
   }
   if ((client.routes as unknown) instanceof Promise) {
-    client.routes = await (client.routes as Promise<unknown>)
+    const resolvedRoutes = await (client.routes as unknown as Promise<unknown>)
+    client.routes = resolvedRoutes as Iterable<RouteDefinition>
   }
   if ((client.create as unknown) instanceof Promise) {
-    const { default: create } = await (client.create as Promise<{ default: unknown }>)
-    client.create = create
+    const { default: create } = await (client.create as unknown as Promise<{ default: unknown }>)
+    client.create = create as unknown as (...args: never[]) => unknown
   }
   return client
 }
 
 export function createErrorHandler(
-  _: Record<string, unknown>,
-  scope: Record<string, unknown>,
-  config: Record<string, unknown>,
+  _args: Record<string, unknown>,
+  scope: FastifyInstance,
+  config: RuntimeConfig,
 ): (error: Error, req: FastifyRequest, reply: FastifyReply) => Promise<FastifyReply> {
   return async (error: Error, req: FastifyRequest, reply: FastifyReply) => {
     req.log.error(error)
@@ -50,47 +79,44 @@ export async function createRoute(
     errorHandler,
     route,
   }: {
-    client: Record<string, unknown>
+    client: ClientModule
     errorHandler: (...args: unknown[]) => unknown
-    route: Record<string, unknown>
+    route: ReactRouteDef
   },
-  scope: Record<string, unknown>,
-  config: Record<string, unknown>,
+  scope: FastifyInstance,
+  config: RuntimeConfig,
 ): Promise<void> {
   if (route.configure) {
-    await (route.configure as (s: Record<string, unknown>) => void | Promise<void>)(scope)
+    await route.configure(scope)
   }
 
-  // Used when hydrating Vue Router on the client
+  // Used when hydrating routes on the client
   const routeMap = Object.fromEntries(
     (client.routes as Array<Record<string, unknown>>).map((_) => [_.path, _]),
   )
 
-  // Extend with route context initialization module
+  // Extend RouteContext prototype with init module (adds user-defined methods/properties)
   RouteContext.extend(client.context as Record<string, unknown>)
 
-  const onRequest = async (
-    req: Record<string, unknown>,
-    reply: Record<string, unknown>,
-  ) => {
-    req.route = await RouteContext.create(
-      scope as unknown as Parameters<typeof RouteContext.create>[0],
-      req as unknown as FastifyRequest,
-      reply as unknown as FastifyReply,
+  const onRequest = async (req: FastifyRequest, reply: FastifyReply) => {
+    ;(req as unknown as Record<string, unknown>).route = await RouteContext.create(
+      scope,
+      req,
+      reply,
       route as Parameters<typeof RouteContext.create>[3],
       client.context as Record<string, unknown>,
     )
   }
 
-  const preHandler = [
-    async (req: Record<string, unknown>) => {
-      const reqRoute = req.route as Record<string, unknown>
+  const preHandler: Array<(req: FastifyRequest) => Promise<void>> = [
+    async (req: FastifyRequest) => {
+      const reqRoute = (req as unknown as Record<string, unknown>).route as Record<string, unknown>
       if (!reqRoute.clientOnly) {
         const app = (client.create as (...args: unknown[]) => unknown)({
           routes: client.routes,
           routeMap,
-          ctxHydration: req.route,
-          url: (req as unknown as { url: string }).url,
+          ctxHydration: reqRoute,
+          url: req.url,
         })
         reqRoute.app = app
       }
@@ -98,87 +124,87 @@ export async function createRoute(
   ]
 
   if (route.getData) {
-    preHandler.push(async (req: Record<string, unknown>) => {
-      const reqRoute = req.route as Record<string, unknown>
+    preHandler.push(async (req: FastifyRequest) => {
+      const reqRoute = (req as unknown as Record<string, unknown>).route as Record<string, unknown>
       if (!reqRoute.data) {
         reqRoute.data = {}
       }
       const result = await (
-        route.getData as (ctx: Record<string, unknown>) => Record<string, unknown>
+        route.getData as (ctx: Record<string, unknown>) => Promise<Record<string, unknown>>
       )(reqRoute)
-      Object.assign(reqRoute.data as Record<string, unknown>, result as Record<string, unknown>)
+      Object.assign(reqRoute.data as Record<string, unknown>, result)
     })
   }
 
   if (route.getMeta) {
-    preHandler.push(async (req: Record<string, unknown>) => {
-      const reqRoute = req.route as Record<string, unknown>
+    preHandler.push(async (req: FastifyRequest) => {
+      const reqRoute = (req as unknown as Record<string, unknown>).route as Record<string, unknown>
       reqRoute.head = await (
-        route.getMeta as (ctx: Record<string, unknown>) => Record<string, unknown>
+        route.getMeta as (ctx: Record<string, unknown>) => Promise<Record<string, unknown>>
       )(reqRoute)
     })
   }
 
   if (route.onEnter) {
-    preHandler.push(async (req: Record<string, unknown>) => {
+    preHandler.push(async (req: FastifyRequest) => {
       try {
         if (route.onEnter) {
-          const reqRoute = req.route as Record<string, unknown>
+          const reqRoute = (req as unknown as Record<string, unknown>).route as Record<string, unknown>
           if (!reqRoute.data) {
             reqRoute.data = {}
           }
           const result = await (
-            route.onEnter as (ctx: Record<string, unknown>) => Record<string, unknown>
+            route.onEnter as (ctx: Record<string, unknown>) => Promise<Record<string, unknown>>
           )(reqRoute)
-          Object.assign(reqRoute.data as Record<string, unknown>, result as Record<string, unknown>)
+          Object.assign(reqRoute.data as Record<string, unknown>, result)
         }
       } catch (err: unknown) {
         if (config.dev) {
           console.error(err)
         }
-        ;(req.route as Record<string, unknown>).error = err
+        ;((req as unknown as Record<string, unknown>).route as Record<string, unknown>).error = err
       }
     })
   }
 
   // Route handler
-  let handler: ((req: Record<string, unknown>, reply: Record<string, unknown>) => unknown) | undefined
+  let handler: ((req: FastifyRequest, reply: FastifyReply) => unknown) | undefined
   if (route.rsc) {
-    handler = async (req: Record<string, unknown>, reply: Record<string, unknown>) => {
+    handler = async (req: FastifyRequest, reply: FastifyReply) => {
       await rscStore.run(
         {
-          req: req as unknown as FastifyRequest,
-          reply: reply as unknown as FastifyReply,
-          server: scope as unknown as Parameters<typeof rscStore.run>[0]['server'],
+          req,
+          reply,
+          server: scope,
         },
         async () => {
           const { convertRequest, sendResponse } = await import('./rsc-handler')
-          const request = await convertRequest(req as unknown as FastifyRequest)
+          const request = await convertRequest(req)
           const response = await (
             client.rscHandler as { fetch: (req: unknown) => Promise<Response> }
           ).fetch(request)
-          sendResponse(reply as unknown as FastifyReply, response)
+          sendResponse(reply, response)
         },
       )
     }
   } else if (config.dev) {
-    handler = (_: Record<string, unknown>, reply: Record<string, unknown>) => {
-      ;(reply as unknown as { html: () => void }).html()
+    handler = async (_req: FastifyRequest, reply: FastifyReply) => {
+      reply.html()
     }
   } else {
     const { id } = route
     const htmlPath = (id as string).replace('pages/', 'html/').replace(/\.(j|t)sx$/, '.html')
     // TODO: Switch to config.viteConfig once deprecated config.vite alias is removed.
-    const viteConfig = config.vite as Record<string, unknown>
+    const viteConfig = config.vite as unknown as Record<string, unknown>
     const buildConfig = viteConfig.build as Record<string, unknown>
     let distDir = buildConfig.outDir as string
     if (!isAbsolute(distDir)) {
       distDir = join(viteConfig.root as string, distDir)
     }
     const htmlSource = readFileSync(join(distDir, htmlPath), 'utf8')
-    const htmlFunction = await createHtmlFunction(htmlSource, scope, config)
-    handler = (_: Record<string, unknown>, reply: Record<string, unknown>) => {
-      return htmlFunction.call(reply) as Promise<string | NodeJS.ReadableStream>
+    const htmlFunction = await createHtmlFunction(htmlSource, scope as unknown as Record<string, unknown>, config as unknown as Record<string, unknown>)
+    handler = async (_req: FastifyRequest, reply: FastifyReply) => {
+      return htmlFunction.call(reply) as Promise<string | Readable>
     }
   }
 
@@ -206,11 +232,9 @@ export async function createRoute(
       get(path: string, opts: Record<string, unknown>): void
     }).get(`/-/data${routePath}`, {
       onRequest,
-      async handler(req: Record<string, unknown>, reply: Record<string, unknown>) {
-        return (reply as unknown as { send: (data: unknown) => void }).send(
-          await (route.getData as (ctx: Record<string, unknown>) => unknown)(
-            (req as Record<string, unknown>).route as Record<string, unknown>,
-          ),
+      async handler(req: FastifyRequest, _reply: FastifyReply) {
+        return (route.getData as (ctx: Record<string, unknown>) => unknown)(
+          (req as unknown as Record<string, unknown>).route as Record<string, unknown>,
         )
       },
     })

@@ -45,7 +45,12 @@ const HEADER_ACTION_ID = 'x-rsc-action'
 interface PageModule {
   default?: ComponentType<Record<string, unknown>>
   getMeta?: (opts: { url: URL }) => Promise<Record<string, unknown>>
-  onEnter?: (ctx: Record<string, unknown>) => Promise<unknown>
+  onEnter?: (ctx: Record<string, unknown>) => Promise<Record<string, unknown> | void>
+}
+
+/** Runtime check that an import.meta.glob result is a module object, not null/undefined. */
+function isPageModule(mod: unknown): mod is PageModule {
+  return typeof mod === 'object' && mod !== null
 }
 
 interface RouteConfigEntry {
@@ -144,7 +149,8 @@ function buildRouteConfig(): RouteConfigEntry[] {
     .map((importPath) => ({
       id: importPath,
       path: filePathToRoutePath(importPath) || '/',
-      lazy: routesManifest[importPath],
+      // Key exists: we're iterating Object.keys(routesManifest)
+      lazy: routesManifest[importPath]!,
     }))
 }
 
@@ -160,9 +166,10 @@ async function extractHeadMeta(
   const loader = routesManifest[routeId]
   if (!loader) return null
   try {
-    const routeModule = (await loader()) as PageModule
-    if (typeof routeModule.getMeta === 'function') {
-      return await routeModule.getMeta({ url })
+    const pageMod = await loader()
+    if (!isPageModule(pageMod)) return null
+    if (typeof pageMod.getMeta === 'function') {
+      return await pageMod.getMeta({ url })
     }
   } catch (err: unknown) {
     console.warn('[rsc-entry] getMeta error:', err)
@@ -192,8 +199,9 @@ async function extractOnEnter(
   const loader = routesManifest[routeId]
   if (!loader) return null
   try {
-    const routeModule = (await loader()) as PageModule
-    if (typeof routeModule.onEnter === 'function') {
+    const pageMod = await loader()
+    if (!isPageModule(pageMod)) return null
+    if (typeof pageMod.onEnter === 'function') {
       const leafMatch = payload?.matches?.slice(-1)[0]
       const rscCtx = getContext()
       const ctx: Record<string, unknown> = {
@@ -205,12 +213,12 @@ async function extractOnEnter(
         req: rscCtx?.req ?? null,
         reply: rscCtx?.reply ?? null,
         firstRender: true,
-        getMeta: !!routeModule.getMeta,
+        getMeta: !!pageMod.getMeta,
         getData: false,
         onEnter: true,
       }
-      const result = await routeModule.onEnter(ctx)
-      return (result ?? null) as Record<string, unknown> | null
+      const result = await pageMod.onEnter(ctx)
+      return (result as Record<string, unknown> | undefined) ?? null
     }
   } catch (err: unknown) {
     console.error('[rsc-entry] onEnter error:', err)
@@ -313,10 +321,12 @@ async function handler(request: Request): Promise<Response> {
 
     const matchedRoute = matchResult.route as RouteConfigEntry
     // Boundary: matchedRoute.lazy() returns Promise<unknown> from
-    // the Vite import.meta.glob result. Cast once to PageModule;
-    // typed properties (getMeta, default, onEnter) are used
-    // without further assertions.
-    const routeModule = (await matchedRoute.lazy()) as PageModule
+    // the Vite import.meta.glob result. Validate with isPageModule
+    // so downstream code accesses typed properties without assertions.
+    const pageModule = await matchedRoute.lazy()
+    if (!isPageModule(pageModule)) {
+      return new Response('Not Found', { status: 404 })
+    }
 
     // Execute onEnter and extract head metadata from the matched leaf route
     let head: unknown = null
@@ -348,10 +358,10 @@ async function handler(request: Request): Promise<Response> {
     }
 
     // Create a React element from the route module's default export.
-    // routeModule is typed as PageModule from the boundary cast above,
+    // pageModule is narrowed to PageModule by the isPageModule guard above,
     // so default is already ComponentType<...> | undefined.
-    const element: ReactNode = routeModule.default
-      ? createElement(routeModule.default)
+    const element: ReactNode = pageModule.default
+      ? createElement(pageModule.default)
       : null
 
     // Build the RSC payload (analogous to what react-router's RSC router produces)
@@ -376,15 +386,16 @@ async function handler(request: Request): Promise<Response> {
     }
 
     // Wrap RSC element tree with ValtioHydrator if Valtio state is available
-    if (valtioState && rscPayload.matches[0].element) {
+    const firstMatch = rscPayload.matches?.[0]
+    if (valtioState && firstMatch?.element) {
       const { snapshot, getVersion } = await import('valtio')
       const stateSnapshot =
         getVersion(valtioState) !== undefined
           ? snapshot(valtioState)
           : valtioState
-      rscPayload.matches[0].element = (
+      rscPayload.matches![0]!.element = (
         <ValtioHydrator state={stateSnapshot}>
-          {rscPayload.matches[0].element}
+          {firstMatch.element}
         </ValtioHydrator>
       )
     }
