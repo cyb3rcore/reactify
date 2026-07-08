@@ -4,6 +4,7 @@ import { join, isAbsolute } from 'node:path'
 import Youch from 'youch'
 import RouteContext from './context.js'
 import { createHtmlFunction } from './rendering.js'
+import { rscStore } from './rsc-context'
 
 export async function prepareClient(entries, _) {
   const client = entries.ssr
@@ -102,7 +103,17 @@ export async function createRoute({ client, errorHandler, route }, scope, config
 
   // Route handler
   let handler
-  if (config.dev) {
+  if (route.rsc) {
+    handler = async (req: FastifyRequest, reply: FastifyReply) => {
+      return rscStore.run({ req, reply, server: scope }, async () => {
+        const { convertRequest, sendResponse } = await import('./rsc-handler')
+        const request = await convertRequest(req)
+        const response = await client.rscHandler.fetch(request)
+        sendResponse(reply, response)
+        return reply
+      })
+    }
+  } else if (config.dev) {
     handler = (_, reply) => reply.html()
   } else {
     const { id } = route
