@@ -78,10 +78,6 @@ function config(config, { command }) {
 function onwarn(warning, rollupWarn) {
   if (
     !(
-      warning.code == 'MISSING_EXPORT' &&
-      warning.message?.includes?.('"scrollBehavior" is not exported')
-    ) &&
-    !(
       warning.code == 'PLUGIN_WARNING' &&
       warning.message?.includes?.('dynamic import will not move module into another chunk')
     ) &&
