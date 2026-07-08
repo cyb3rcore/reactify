@@ -3,12 +3,12 @@ import { readFile } from 'node:fs/promises'
 import { isAbsolute, join, parse, resolve } from 'node:path'
 import type { FastifyInstance } from 'fastify'
 import FastifyStatic from '@fastify/static'
-import type { ClientEntries, ClientModule } from '../types/client.ts'
-import type { ProdRuntimeConfig } from '../types/options.ts'
-import type { SerializableViteConfig } from '../types/vite-configs.ts'
-import { resolveIfRelative } from '../ioutils.ts'
-import { transformAssetUrls } from '../html-assets.ts'
-import type { ReactifyViteDecorationPriorToSetup } from './support.ts'
+import type { ClientEntries, ClientModule } from '../types/client.js'
+import type { ProdRuntimeConfig } from '../types/options.js'
+import type { SerializableViteConfig } from '../types/vite-configs.js'
+import { resolveIfRelative } from '../ioutils.js'
+import { transformAssetUrls } from '../html-assets.js'
+import type { ReactifyViteDecorationPriorToSetup } from './support.js'
 
 type EntryBundle =
   | {

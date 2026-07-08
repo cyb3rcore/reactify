@@ -33,7 +33,7 @@
     }
   },
   "scripts": {
-    "build": "tsc && python3 scripts/fix-import-extensions.py",
+    "build": "tsc",
     "test": "vitest run",
     "test:e2e": "npm run build && vitest run --config vitest.e2e.config.ts && npx playwright test",
     "test:e2e:server": "vitest run --config vitest.e2e.config.ts",

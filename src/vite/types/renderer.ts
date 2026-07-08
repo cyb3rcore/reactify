@@ -1,8 +1,8 @@
 import type { FastifyInstance, RouteHandlerMethod, RouteOptions } from 'fastify'
-import type { ClientEntries, ClientModule } from './client.ts'
-import type { RuntimeConfig } from './options.ts'
-import type { ReplyDotHtmlFunction, ReplyDotRenderFunction } from './reply.ts'
-import type { ClientRouteArgs, CreateRouteArgs } from './route.ts'
+import type { ClientEntries, ClientModule } from './client.js'
+import type { RuntimeConfig } from './options.js'
+import type { ReplyDotHtmlFunction, ReplyDotRenderFunction } from './reply.js'
+import type { ClientRouteArgs, CreateRouteArgs } from './route.js'
 
 /** Renderer option interface for custom renderers */
 export interface RendererOption {

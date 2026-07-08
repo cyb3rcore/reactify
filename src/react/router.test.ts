@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { matchPath, matchRoute, createPath, parseLocation } from './router'
+import { matchPath, matchRoute, createPath, parseLocation } from './router.js'
 
 describe('matchPath', () => {
   it('matches static routes', () => {

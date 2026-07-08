@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { RouteProvider, type RouteDef } from './core'
+import { RouteProvider, type RouteDef } from './core.js'
 
 describe('RouteProvider', () => {
   it('renders children', () => {
