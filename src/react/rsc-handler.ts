@@ -13,7 +13,7 @@ export async function convertRequest(req: FastifyRequest & { route?: Record<stri
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const contentType = (req.headers as Record<string, string>)?.['content-type'] ?? ''
     if (contentType.startsWith('multipart/form-data')) {
-      init.body = req.raw as ReadableStream
+      init.body = req.raw as unknown as ReadableStream
       init.duplex = 'half'
     } else if ((req as any).body) {
       const body = typeof (req as any).body === 'string'

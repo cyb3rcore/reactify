@@ -14,6 +14,14 @@ import { renderToReadableStream } from 'react-dom/server'
 import { createHead, transformHtmlTemplate } from '@unhead/react/server'
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
+import type { ReactNode } from 'react'
+
+interface RscPayload {
+  matches?: Array<{ element?: ReactNode }>
+  head?: unknown
+  formState?: unknown
+  returnValue?: { ok?: boolean; data?: unknown }
+}
 
 /**
  * Load the index.html template for the HTML document shell.
@@ -132,7 +140,7 @@ export async function generateHTML(
   ).viteRsc.loadBootstrapScriptContent('index')
 
   // Read the RSC payload and extract the matched route element
-  const rscPayload = await createFromReadableStream(serverResponse.body!)
+  const rscPayload = await createFromReadableStream<RscPayload>(serverResponse.body!)
   const element =
     rscPayload?.matches?.[0]?.element ?? null
 
@@ -145,7 +153,7 @@ export async function generateHTML(
   // Render the matched element to a readable stream (React SSR)
   const htmlStream = await renderToReadableStream(<>{element}</>, {
     bootstrapScriptContent,
-    formState: rscPayload?.formState,
+    formState: rscPayload?.formState as import('react-dom/client').ReactFormState | undefined,
     signal: request.signal,
   })
 

@@ -20,7 +20,7 @@ export function RouteRenderer({ notFound: NotFound }: RouteRendererProps) {
 
   return (
     <AppRoute route={routeData} params={params}>
-      <Layout params={params}>
+      <Layout>
         <Component params={params} data={routeData?.data ?? {}} />
       </Layout>
     </AppRoute>
