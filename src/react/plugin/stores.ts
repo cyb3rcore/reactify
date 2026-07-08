@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function generateStores(keys) {
   let code = `
 import { useRouteContext } from '@fastify/react/client'

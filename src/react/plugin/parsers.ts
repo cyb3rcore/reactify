@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as acorn from 'acorn'
 import * as walk from 'acorn-walk'
 
