@@ -143,6 +143,7 @@ function getRouteModuleExports(
     clientOnly: routeModule.clientOnly,
     serverOnly: routeModule.serverOnly,
     configure: routeModule.configure,
+    rsc: routeModule.rsc as boolean | undefined,
     onRequest: routeModule.onRequest ?? undefined,
     preParsing: routeModule.preParsing ?? undefined,
     preValidation: routeModule.preValidation ?? undefined,

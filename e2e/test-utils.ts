@@ -10,6 +10,8 @@ export function makeIndexTest({ main, dev }: { main: MainFn; dev?: boolean }) {
       const res = await server.inject({ method: 'GET', url: '/' })
       expect(res.statusCode).toBe(200)
       expect(res.body).toBeDefined()
+      expect(res.headers['content-type']).toBeDefined()
+      expect(res.headers['content-type']).toContain('text/html')
     } finally {
       await server.close()
     }
