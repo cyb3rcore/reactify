@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect } from 'vitest'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -17,7 +16,7 @@ describe('virtual module resolution', () => {
   })
 
   it('resolveId leaves project overrides as real files', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'fastify-react-virtual-'))
+    const root = await mkdtemp(join(tmpdir(), 'reactify-virtual-'))
     const override = join(root, 'layouts.ts')
     await writeFile(override, 'export default {}')
 
