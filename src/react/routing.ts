@@ -1,13 +1,9 @@
-import { readFileSync } from 'node:fs'
-import { join, isAbsolute } from 'node:path'
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import Youch from 'youch'
 import type { ClientModule, ClientEntries } from '../vite/types/client'
 import type { RuntimeConfig } from '../vite/types/options'
 import type { RouteDefinition } from '../vite/types/route'
-import type { Readable } from 'node:stream'
 import RouteContext from './context'
-import { createHtmlFunction } from './rendering'
 import { rscStore } from './rsc-context'
 
 /**
@@ -189,22 +185,11 @@ export async function createRoute(
     }
   } else if (config.dev) {
     handler = async (_req: FastifyRequest, reply: FastifyReply) => {
-      reply.html()
+      return reply.html()
     }
   } else {
-    const { id } = route
-    const htmlPath = (id as string).replace('pages/', 'html/').replace(/\.(j|t)sx$/, '.html')
-    // TODO: Switch to config.viteConfig once deprecated config.vite alias is removed.
-    const viteConfig = config.vite as unknown as Record<string, unknown>
-    const buildConfig = viteConfig.build as Record<string, unknown>
-    let distDir = buildConfig.outDir as string
-    if (!isAbsolute(distDir)) {
-      distDir = join(viteConfig.root as string, distDir)
-    }
-    const htmlSource = readFileSync(join(distDir, htmlPath), 'utf8')
-    const htmlFunction = await createHtmlFunction(htmlSource, scope as unknown as Record<string, unknown>, config as unknown as Record<string, unknown>)
     handler = async (_req: FastifyRequest, reply: FastifyReply) => {
-      return htmlFunction.call(reply) as Promise<string | Readable>
+      return reply.html()
     }
   }
 
