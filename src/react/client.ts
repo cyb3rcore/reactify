@@ -1,11 +1,25 @@
 // @ts-nocheck
-import { createContext, useContext, lazy } from 'react'
+import { createContext, useContext, lazy, type ComponentType } from 'react'
 import { useSnapshot } from 'valtio'
 
-export const RouteContext = createContext({})
+export interface RouteDef {
+  path: string
+  component?: ComponentType<unknown>
+  loader?: () => Promise<{ default: ComponentType<unknown> }>
+  id?: string
+  [key: string]: unknown
+}
+
+export interface RouteContextValue {
+  state?: Record<string, unknown>
+  snapshot?: Record<string, unknown>
+  [key: string]: unknown
+}
+
+export const RouteContext = createContext<RouteContextValue>({})
 export const isServer = typeof window === 'undefined' && typeof process === 'object'
 
-export function useRouteContext() {
+export function useRouteContext(): RouteContextValue {
   const routeContext = useContext(RouteContext)
   if (routeContext.state) {
     routeContext.snapshot = isServer
@@ -15,29 +29,42 @@ export function useRouteContext() {
   return routeContext
 }
 
-export async function hydrateRoutes(fromInput) {
-  let from = fromInput
-  if (Array.isArray(from)) {
-    from = Object.fromEntries(from.map((route) => [route.path, route]))
+declare global {
+  interface Window {
+    routes?: RouteDef[]
   }
-  return window.routes.map((route) => {
-    route.loader = memoImport(from[route.id])
-    route.component = lazy(() => route.loader())
-    return route
+}
+
+export async function hydrateRoutes(
+  fromInput: RouteDef[] | Record<string, RouteDef>,
+): Promise<RouteDef[]> {
+  let from: Record<string, RouteDef>
+  if (Array.isArray(fromInput)) {
+    from = Object.fromEntries(
+      fromInput.map((route) => [route.path as string, route]),
+    )
+  } else {
+    from = fromInput
+  }
+  const windowRoutes = (window as { routes?: unknown[] }).routes ?? []
+  return windowRoutes.map((route) => {
+    const r = route as Record<string, unknown>
+    r.loader = memoImport(from[r.id as string])
+    r.component = lazy(() => (r.loader as () => Promise<unknown>)())
+    return r as unknown as RouteDef
   })
 }
 
-function memoImport(func) {
-  // Otherwise we get a ReferenceError, but since this function
-  // is only ran once for each route, there's no overhead
+function memoImport<T>(func: () => Promise<T>): () => Promise<T> {
   const kFuncExecuted = Symbol('kFuncExecuted')
   const kFuncValue = Symbol('kFuncValue')
-  func[kFuncExecuted] = false
+  const cache = func as unknown as Record<symbol, boolean | T>
+  cache[kFuncExecuted] = false
   return async () => {
-    if (!func[kFuncExecuted]) {
-      func[kFuncValue] = await func()
-      func[kFuncExecuted] = true
+    if (!cache[kFuncExecuted]) {
+      cache[kFuncValue] = await func()
+      cache[kFuncExecuted] = true
     }
-    return func[kFuncValue]
+    return cache[kFuncValue] as T
   }
 }

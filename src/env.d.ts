@@ -14,6 +14,25 @@ interface Window {
   routes: Array<Record<string, unknown>>
 }
 
+// RSC plugin runtime extensions on import.meta
+interface ImportMeta {
+  readonly viteRsc: {
+    import: <T>(
+      specifier: string,
+      options: { environment: string },
+    ) => Promise<T>
+    loadModule: <T>(environmentName: string, entryName?: string) => Promise<T>
+    loadBootstrapScriptContent: (entryName: string) => Promise<string>
+  }
+  readonly hot?: {
+    accept(): void
+    accept(path: string): void
+    accept(path: string, cb: (mod: unknown) => void): void
+    dispose(cb: (data: unknown) => void): void
+    invalidate(): void
+  }
+}
+
 // @unhead/react with query parameter
 declare module '@unhead/react/server?server' {
   import type { ComponentType, ReactNode } from 'react'
