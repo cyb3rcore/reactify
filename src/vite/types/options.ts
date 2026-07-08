@@ -9,11 +9,11 @@ import type { ReplyDotHtmlFunction, ReplyDotRenderFunction } from './reply.ts'
 import type { ClientRouteArgs, CreateRouteArgs } from './route.ts'
 import type { SerializableViteConfig } from './vite-configs.ts'
 
-/** Keys managed internally by @fastify/vite — not overridable via fastifyStaticOptions */
+/** Keys managed internally by reactify — not overridable via fastifyStaticOptions */
 type ManagedStaticKeys = 'root' | 'prefix' | 'serve'
 
-/** User-provided options for the @fastify/vite plugin */
-export interface FastifyViteOptions extends Partial<RendererOption> {
+/** User-provided options for the reactify vite plugin */
+export interface ReactifyViteOptions extends Partial<RendererOption> {
   /** Where to look for the vite configuration file */
   root: string
 
@@ -136,5 +136,5 @@ export interface ProdRuntimeConfig extends BaseRuntimeConfig {
   readonly vite: SerializableViteConfig
 }
 
-/** Resolved fastify-vite configuration built by merging options with default configs */
+/** Resolved reactify configuration built by merging options with default configs */
 export type RuntimeConfig = DevRuntimeConfig | ProdRuntimeConfig
