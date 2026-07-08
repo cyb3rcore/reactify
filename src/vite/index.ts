@@ -10,7 +10,7 @@ import type { ViteDevServer } from 'vite'
 import type { ModuleRunner } from 'vite/module-runner'
 import fp from 'fastify-plugin'
 import { configure } from './config.ts'
-import { hasIterableRoutes, type ReactifyViteDecorationPriorToSetup } from './mode/support'
+import { hasIterableRoutes, type ReactifyViteDecorationPriorToSetup } from './mode/support.js'
 import type { ClientEntries, ClientModule } from './types/client.ts'
 import type { HtmlTemplateFunction } from './types/html.ts'
 import type {
@@ -71,6 +71,11 @@ interface ModeModule {
 const kMode = Symbol('kMode')
 const kOptions = Symbol('kOptions')
 
+/** Read a value stored on the Fastify instance via symbol decoration. */
+function getSymbolState<T>(scope: FastifyInstance, sym: symbol): T | undefined {
+  return (scope as unknown as Record<symbol, T | undefined>)[sym]
+}
+
 class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
   scope: FastifyInstance
   createServer?: unknown
@@ -122,21 +127,15 @@ class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
       for (const route of client.routes) {
         if (this.runtimeConfig.dev) {
           const hotSymbol = this[kMode].hot!
+          const hmrClient = () =>
+            getSymbolState<{ client?: unknown }>(this.scope, hotSymbol)?.client ?? client
+          const hmrRoute = () =>
+            getSymbolState<{ routeHash?: Map<string, RouteDefinition> }>(this.scope, hotSymbol)
+              ?.routeHash?.get(route.path!) ?? route
+
           const hmrHandler = async (req: FastifyRequest, reply: FastifyReply) => {
-            // Create route handler and route error handler functions
             const handler = await this.runtimeConfig.createRouteHandler(
-              {
-                client:
-                  (this.scope as unknown as Record<symbol, { client?: unknown }>)[hotSymbol]
-                    ?.client ?? client,
-                route:
-                  (
-                    this.scope as unknown as Record<
-                      symbol,
-                      { routeHash?: Map<string, RouteDefinition> }
-                    >
-                  )[hotSymbol]?.routeHash?.get(route.path!) ?? route,
-              },
+              { client: hmrClient(), route: hmrRoute() },
               this.scope,
               this.runtimeConfig,
             )
@@ -148,18 +147,7 @@ class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
             reply: FastifyReply,
           ) => {
             const errorHandler = await this.runtimeConfig.createErrorHandler(
-              {
-                client:
-                  (this.scope as unknown as Record<symbol, { client?: unknown }>)[hotSymbol]
-                    ?.client ?? client,
-                route:
-                  (
-                    this.scope as unknown as Record<
-                      symbol,
-                      { routeHash?: Map<string, RouteDefinition> }
-                    >
-                  )[hotSymbol]?.routeHash?.get(route.path!) ?? route,
-              },
+              { client: hmrClient(), route: hmrRoute() },
               this.scope,
               this.runtimeConfig,
             )
