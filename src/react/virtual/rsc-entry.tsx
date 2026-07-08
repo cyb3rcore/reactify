@@ -17,7 +17,7 @@ import {
 } from '@vitejs/plugin-rsc/rsc'
 import { createElement, type ComponentType, type ReactNode } from 'react'
 import { matchRoute } from '../router.js'
-import { getContext } from '../rsc-context.js'
+import { getContext, setSyncContext } from '../rsc-context.js'
 import type { RscAttachedRequest } from '../rsc-handler.js'
 import routesManifest from '$app/routes.js'
 import ValtioHydrator from '$app/valtio-hydrator.js'
@@ -249,6 +249,15 @@ async function handler(request: Request): Promise<Response> {
   const rscRequest = request as RscAttachedRequest
   const valtioState = rscRequest.__valtioState
   const renderRequest = parseRenderRequest(request)
+
+  // Set sync context from request so page components can access it via getReq()/getServer()
+  if (rscRequest.__req) {
+    setSyncContext({
+      req: rscRequest.__req,
+      server: rscRequest.__server,
+      reply: rscRequest.__reply,
+    } as import('../rsc-context.js').RscContext)
+  }
 
   // ------------------------------------------------------------------
   // 1. Handle server actions

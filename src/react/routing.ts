@@ -167,13 +167,16 @@ export async function createRoute(
   let handler: ((req: FastifyRequest, reply: FastifyReply) => unknown) | undefined
   if (route.rsc) {
     handler = async (req: FastifyRequest, reply: FastifyReply) => {
+      const ctx = { req, reply, server: scope }
+      // Store scope in req.route so convertRequest can attach it to the RSC Request
+      const routeData = (req as unknown as Record<string, unknown>).route as Record<string, unknown> | undefined
+      if (routeData) {
+        routeData.server = scope
+      }
       await rscStore.run(
-        {
-          req,
-          reply,
-          server: scope,
-        },
+        ctx,
         async () => {
+          setSyncContext(ctx)
           const { convertRequest, sendResponse } = await import('./rsc-handler.js')
           const request = await convertRequest(req)
           const response = await (

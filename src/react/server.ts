@@ -40,7 +40,8 @@ class Routes extends Array<RouteRecord> {
       id: route.id,
       path: route.path,
       name: route.name,
-      layout: !!route.layout,
+      layout: route.layout,
+      hasLayout: !!route.layout,
       getData: !!route.getData,
       getMeta: !!route.getMeta,
       onEnter: !!route.onEnter,
@@ -88,8 +89,8 @@ export async function createRoutes(
           (routeDef as Record<string, unknown>).component as () => Promise<unknown>,
         ).then((routeModule) => ({
           id: (routeDef as Record<string, unknown>).path as string,
-          name: (routeDef as Record<string, unknown>).path as string ?? routeModule.path,
-          path: (routeDef as Record<string, unknown>).path as string ?? routeModule.path,
+          name: ((routeDef as Record<string, unknown>).path ?? routeModule.path) as string,
+          path: ((routeDef as Record<string, unknown>).path ?? routeModule.path) as string,
           ...routeModule,
         })),
       )
