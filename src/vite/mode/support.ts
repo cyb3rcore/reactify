@@ -6,7 +6,7 @@ import type { RuntimeConfig } from '../types/options.ts'
 import type { RouteDefinition } from '../types/route.ts'
 
 /** Shared setup context interface used by both dev and production setup functions */
-export interface FastifyViteDecorationPriorToSetup {
+export interface ReactifyViteDecorationPriorToSetup {
   scope: FastifyInstance
   runtimeConfig: RuntimeConfig
   devServer?: ViteDevServer

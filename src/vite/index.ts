@@ -10,12 +10,12 @@ import type { ViteDevServer } from 'vite'
 import type { ModuleRunner } from 'vite/module-runner'
 import fp from 'fastify-plugin'
 import { configure } from './config.ts'
-import { hasIterableRoutes, type FastifyViteDecorationPriorToSetup } from './mode/support.ts'
+import { hasIterableRoutes, type ReactifyViteDecorationPriorToSetup } from './mode/support.ts'
 import type { ClientEntries, ClientModule } from './types/client.ts'
 import type { HtmlTemplateFunction } from './types/html.ts'
 import type {
   DevRuntimeConfig,
-  FastifyViteOptions,
+  ReactifyViteOptions,
   ProdRuntimeConfig,
   RuntimeConfig,
 } from './types/options.ts'
@@ -36,7 +36,7 @@ export type {
   ClientRouteArgs,
   CreateRouteArgs,
   DevRuntimeConfig,
-  FastifyViteOptions,
+  ReactifyViteOptions,
   HtmlTemplateFunction,
   ProdRuntimeConfig,
   RendererOption,
@@ -59,19 +59,19 @@ declare module 'fastify' {
   }
 
   interface FastifyInstance {
-    vite: FastifyViteDecoration
+    vite: ReactifyViteDecoration
   }
 }
 
 interface ModeModule {
-  setup: (ctx: FastifyViteDecorationPriorToSetup) => Promise<ClientModule | null>
+  setup: (ctx: ReactifyViteDecorationPriorToSetup) => Promise<ClientModule | null>
   hot?: symbol
 }
 
 const kMode = Symbol('kMode')
 const kOptions = Symbol('kOptions')
 
-class FastifyViteDecoration implements FastifyViteDecorationPriorToSetup {
+class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
   scope: FastifyInstance
   createServer?: unknown
   runtimeConfig!: RuntimeConfig
@@ -80,17 +80,17 @@ class FastifyViteDecoration implements FastifyViteDecorationPriorToSetup {
   runners?: Record<string, ModuleRunner>;
   [key: symbol]: unknown
 
-  private [kOptions]: FastifyViteOptions
+  private [kOptions]: ReactifyViteOptions
   private [kMode]!: ModeModule
 
-  constructor(scope: FastifyInstance, options: FastifyViteOptions) {
+  constructor(scope: FastifyInstance, options: ReactifyViteOptions) {
     this.scope = scope
     this.createServer = (options as unknown as { createServer?: unknown }).createServer
     this[kOptions] = options
   }
 
   /**
-   * Completes @fastify/vite runtime initialization.
+    * Completes reactify runtime initialization.
    *
    * This is intentionally not run during plugin registration; call
    * `await server.vite.ready()` when your app is ready to start Vite setup,
@@ -213,15 +213,15 @@ class FastifyViteDecoration implements FastifyViteDecorationPriorToSetup {
   }
 }
 
-const pluginFn: FastifyPluginCallback<FastifyViteOptions> = (scope, options, done) => {
-  scope.decorate('vite', new FastifyViteDecoration(scope, options))
+const pluginFn: FastifyPluginCallback<ReactifyViteOptions> = (scope, options, done) => {
+  scope.decorate('vite', new ReactifyViteDecoration(scope, options))
   done()
 }
 
-const fastifyVite = fp(pluginFn, {
+const reactifyVite = fp(pluginFn, {
   fastify: '5.x',
-  name: '@fastify/vite',
+  name: 'reactify-vite',
 })
 
-export default fastifyVite
-export { fastifyVite }
+export default reactifyVite
+export { reactifyVite }

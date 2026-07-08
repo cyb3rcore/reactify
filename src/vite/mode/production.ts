@@ -8,7 +8,7 @@ import type { ProdRuntimeConfig } from '../types/options.ts'
 import type { SerializableViteConfig } from '../types/vite-configs.ts'
 import { resolveIfRelative } from '../ioutils.ts'
 import { transformAssetUrls } from '../html-assets.ts'
-import type { FastifyViteDecorationPriorToSetup } from './support.ts'
+import type { ReactifyViteDecorationPriorToSetup } from './support.ts'
 
 type EntryBundle =
   | {
@@ -97,9 +97,9 @@ async function loadEntries(
 }
 
 export async function setup(
-  fastifyViteDecoration: FastifyViteDecorationPriorToSetup,
+  reactifyViteDecoration: ReactifyViteDecorationPriorToSetup,
 ): Promise<ClientModule | null> {
-  const runtimeConfig = fastifyViteDecoration.runtimeConfig as ProdRuntimeConfig
+  const runtimeConfig = reactifyViteDecoration.runtimeConfig as ProdRuntimeConfig
   const { spa, viteConfig } = runtimeConfig
   let clientOutDir: string
   let ssrOutDir: string
@@ -137,7 +137,7 @@ export async function setup(
   const basePathname = URL.canParse(viteConfig.base ?? '')
     ? new URL(viteConfig.base!).pathname
     : viteConfig.base || '/'
-  await fastifyViteDecoration.scope.register(async function assetFiles(scope: FastifyInstance) {
+  await reactifyViteDecoration.scope.register(async function assetFiles(scope: FastifyInstance) {
     const root = [resolve(clientOutDir, assetsDir)]
     if (existsSync(resolve(ssrOutDir, assetsDir))) {
       root.push(resolve(ssrOutDir, assetsDir))
@@ -149,7 +149,7 @@ export async function setup(
     })
   })
 
-  await fastifyViteDecoration.scope.register(async function publicFiles(scope: FastifyInstance) {
+  await reactifyViteDecoration.scope.register(async function publicFiles(scope: FastifyInstance) {
     await scope.register(FastifyStatic, {
       ...runtimeConfig.fastifyStaticOptions,
       root: clientOutDir,
@@ -170,7 +170,7 @@ export async function setup(
   const entries = await loadEntries(runtimeConfig, viteConfig)
 
   const client: ClientModule | null = !runtimeConfig.spa
-    ? await runtimeConfig.prepareClient(entries, fastifyViteDecoration.scope, runtimeConfig)
+    ? await runtimeConfig.prepareClient(entries, reactifyViteDecoration.scope, runtimeConfig)
     : null
 
   const indexHtmlPath = join(clientOutDir, 'index.html')
@@ -183,18 +183,18 @@ export async function setup(
     )
   }
 
-  fastifyViteDecoration.scope.decorateReply(
+  reactifyViteDecoration.scope.decorateReply(
     'html',
-    await runtimeConfig.createHtmlFunction(indexHtml, fastifyViteDecoration.scope, runtimeConfig),
+    await runtimeConfig.createHtmlFunction(indexHtml, reactifyViteDecoration.scope, runtimeConfig),
   )
 
   if (runtimeConfig.hasRenderFunction && client) {
     const renderFunction = await runtimeConfig.createRenderFunction!(
       client,
-      fastifyViteDecoration.scope,
+      reactifyViteDecoration.scope,
       runtimeConfig,
     )
-    fastifyViteDecoration.scope.decorateReply('render', renderFunction)
+    reactifyViteDecoration.scope.decorateReply('render', renderFunction)
   }
 
   return client

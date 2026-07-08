@@ -6,7 +6,7 @@ import middie, { type Handler as MiddieHandler } from '@fastify/middie'
 import type { ClientModule } from '../types/client.ts'
 import type { DevRuntimeConfig } from '../types/options.ts'
 import type { RouteDefinition } from '../types/route.ts'
-import { hasIterableRoutes, type FastifyViteDecorationPriorToSetup } from './support.ts'
+import { hasIterableRoutes, type ReactifyViteDecorationPriorToSetup } from './support.ts'
 
 export const hot = Symbol('hotModuleReplacementProxy')
 
@@ -50,13 +50,13 @@ async function loadEntryModulePaths(
 }
 
 export async function loadEntries(
-  fastifyViteDecoration: FastifyViteDecorationPriorToSetup,
+  reactifyViteDecoration: ReactifyViteDecorationPriorToSetup,
   config: DevRuntimeConfig,
 ): Promise<void> {
   // Initialize runners object only once to prevent memory leaks
   // Vite's ModuleRunner.import() automatically returns the latest version after HMR updates
-  if (!fastifyViteDecoration.runners) {
-    fastifyViteDecoration.runners = {}
+  if (!reactifyViteDecoration.runners) {
+    reactifyViteDecoration.runners = {}
   }
 
   const entryModulePaths = await loadEntryModulePaths(config)
@@ -65,7 +65,7 @@ export async function loadEntries(
     return
   }
 
-  for (const [env, envConfig] of Object.entries(fastifyViteDecoration.devServer!.environments)) {
+  for (const [env, envConfig] of Object.entries(reactifyViteDecoration.devServer!.environments)) {
     if (env === 'client') {
       continue
     }
@@ -74,73 +74,73 @@ export async function loadEntries(
     // Use the environment's own runner (RunnableDevEnvironment.runner) where available
     // to avoid creating a second ModuleRunner instance later when @vitejs/plugin-rsc
     // performs cross-environment imports via import.meta.viteRsc.import('ssr', ...).
-    let runner = fastifyViteDecoration.runners[env]
+    let runner = reactifyViteDecoration.runners[env]
     if (!runner) {
       runner = isRunnableDevEnvironment(envConfig)
         ? envConfig.runner
         : createServerModuleRunner(envConfig)
-      fastifyViteDecoration.runners[env] = runner
+      reactifyViteDecoration.runners[env] = runner
     }
 
     if (env in entryModulePaths) {
       const entryModule = (await runner.import(entryModulePaths[env])) as LoadedEntryModule
       const clientModule: ClientModule = entryModule.default ?? entryModule
-      if (!fastifyViteDecoration.entries![env]) {
-        fastifyViteDecoration.entries![env] = { ...clientModule }
+      if (!reactifyViteDecoration.entries![env]) {
+        reactifyViteDecoration.entries![env] = { ...clientModule }
       } else {
-        Object.assign(fastifyViteDecoration.entries![env], clientModule)
+        Object.assign(reactifyViteDecoration.entries![env], clientModule)
       }
     }
   }
 }
 
 export async function setup(
-  fastifyViteDecoration: FastifyViteDecorationPriorToSetup,
+  reactifyViteDecoration: ReactifyViteDecorationPriorToSetup,
 ): Promise<ClientModule | null> {
-  const runtimeConfig = fastifyViteDecoration.runtimeConfig as DevRuntimeConfig
+  const runtimeConfig = reactifyViteDecoration.runtimeConfig as DevRuntimeConfig
 
-  if (!fastifyViteDecoration.scope.hasDecorator('use')) {
-    await fastifyViteDecoration.scope.register(middie)
+  if (!reactifyViteDecoration.scope.hasDecorator('use')) {
+    await reactifyViteDecoration.scope.register(middie)
   }
 
-  fastifyViteDecoration.devServer = await createServer({
+  reactifyViteDecoration.devServer = await createServer({
     configFile: runtimeConfig.viteConfig.configFile,
     server: {
       middlewareMode: true,
       hmr: {
-        server: fastifyViteDecoration.scope.server,
+        server: reactifyViteDecoration.scope.server,
       },
     },
     appType: 'custom',
   })
   // Connect.Server implements the middleware handler interface
-  fastifyViteDecoration.scope.use(
-    fastifyViteDecoration.devServer.middlewares as unknown as MiddieHandler,
+  reactifyViteDecoration.scope.use(
+    reactifyViteDecoration.devServer.middlewares as unknown as MiddieHandler,
   )
 
-  fastifyViteDecoration.entries = {}
+  reactifyViteDecoration.entries = {}
 
-  fastifyViteDecoration.scope.decorate(hot, {})
+  reactifyViteDecoration.scope.decorate(hot, {})
   // After decoration, the scope has the hot state
-  const hotScope = fastifyViteDecoration.scope as HotScope
+  const hotScope = reactifyViteDecoration.scope as HotScope
 
-  fastifyViteDecoration.scope.decorateReply('render', null as never)
-  fastifyViteDecoration.scope.decorateReply('html', null as never)
+  reactifyViteDecoration.scope.decorateReply('render', null as never)
+  reactifyViteDecoration.scope.decorateReply('html', null as never)
 
   Object.defineProperty(runtimeConfig, 'hasRenderFunction', {
     writable: false,
     value: typeof runtimeConfig.createRenderFunction === 'function',
   })
 
-  fastifyViteDecoration.scope.addHook(
+  reactifyViteDecoration.scope.addHook(
     'onRequest',
     async (req: FastifyRequest, reply: FastifyReply) => {
-      await loadEntries(fastifyViteDecoration, runtimeConfig)
+      await loadEntries(reactifyViteDecoration, runtimeConfig)
       const clientResult =
         !runtimeConfig.spa &&
         (await runtimeConfig.prepareClient(
-          fastifyViteDecoration.entries!,
-          fastifyViteDecoration.scope,
+          reactifyViteDecoration.entries!,
+          reactifyViteDecoration.scope,
           runtimeConfig,
         ))
       const client = clientResult ? (clientResult as ClientModule) : null
@@ -158,44 +158,44 @@ export async function setup(
       const { viteConfig } = runtimeConfig
       const indexHtmlPath = join(viteConfig.root, 'index.html')
       const indexHtml = await readFile(indexHtmlPath, 'utf8')
-      const transformedHtml = await fastifyViteDecoration.devServer!.transformIndexHtml(
+      const transformedHtml = await reactifyViteDecoration.devServer!.transformIndexHtml(
         req.url,
         indexHtml,
       )
 
       reply.html = await runtimeConfig.createHtmlFunction(
         transformedHtml,
-        fastifyViteDecoration.scope,
+        reactifyViteDecoration.scope,
         runtimeConfig,
       )
 
       if (runtimeConfig.hasRenderFunction) {
         reply.render = await runtimeConfig.createRenderFunction!(
           hotScope[hot].client!,
-          fastifyViteDecoration.scope,
+          reactifyViteDecoration.scope,
           runtimeConfig,
         )
       }
     },
   )
 
-  fastifyViteDecoration.scope.addHook('onClose', async () => {
+  reactifyViteDecoration.scope.addHook('onClose', async () => {
     // Close all runners to clean up HMR event listeners
-    if (fastifyViteDecoration.runners) {
+    if (reactifyViteDecoration.runners) {
       await Promise.all(
-        Object.values(fastifyViteDecoration.runners).map((runner) => runner.close()),
+        Object.values(reactifyViteDecoration.runners).map((runner) => runner.close()),
       )
     }
-    await fastifyViteDecoration.devServer!.close()
+    await reactifyViteDecoration.devServer!.close()
   })
 
-  await loadEntries(fastifyViteDecoration, runtimeConfig)
+  await loadEntries(reactifyViteDecoration, runtimeConfig)
 
   const clientResult =
     !runtimeConfig.spa &&
     (await runtimeConfig.prepareClient(
-      fastifyViteDecoration.entries!,
-      fastifyViteDecoration.scope,
+      reactifyViteDecoration.entries!,
+      reactifyViteDecoration.scope,
       runtimeConfig,
     ))
   const client = clientResult ? (clientResult as ClientModule) : null
