@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { findExports } from 'mlly'

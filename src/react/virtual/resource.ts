@@ -1,8 +1,26 @@
-// @ts-nocheck
-const clientFetchMap = new Map()
-const clientResourceMap = new Map()
+interface LoaderState<T = unknown> {
+  suspended: boolean
+  error: Error | null
+  result: T | null
+  promise: Promise<unknown> | null
+}
 
-export function waitResource(path, id, promise, resourceMap = clientResourceMap) {
+interface FetchLoaderState {
+  suspended: boolean
+  error: Error | null
+  data: Record<string, unknown> | null
+  promise: Promise<unknown> | null
+}
+
+const clientFetchMap = new Map<string, FetchLoaderState>()
+const clientResourceMap = new Map<string, LoaderState>()
+
+export function waitResource<T>(
+  path: string,
+  id: string,
+  promise?: () => Promise<T>,
+  resourceMap: Map<string, LoaderState> = clientResourceMap,
+): T {
   const resourceId = `${path}:${id}`
   const loaderStatus = resourceMap.get(resourceId)
   if (loaderStatus) {
@@ -13,10 +31,14 @@ export function waitResource(path, id, promise, resourceMap = clientResourceMap)
       throw loaderStatus.promise
     }
     resourceMap.delete(resourceId)
-
-    return loaderStatus.result
+    return loaderStatus.result as T
   }
-  const loader = {
+
+  if (!promise) {
+    throw new Error('waitResource: no cached entry and no promise provided')
+  }
+
+  const loader: LoaderState<T> = {
     suspended: true,
     error: null,
     result: null,
@@ -26,7 +48,7 @@ export function waitResource(path, id, promise, resourceMap = clientResourceMap)
     .then((result) => {
       loader.result = result
     })
-    .catch((loaderError) => {
+    .catch((loaderError: Error) => {
       loader.error = loaderError
     })
     .finally(() => {
@@ -35,15 +57,20 @@ export function waitResource(path, id, promise, resourceMap = clientResourceMap)
 
   resourceMap.set(resourceId, loader)
 
-  return waitResource(path, id)
+  // Re-enter to pick up the suspended state (triggers React Suspense)
+  return waitResource<T>(path, id, undefined, resourceMap)
 }
 
-export function waitFetch(path, options = {}, fetchMap = clientFetchMap) {
+export function waitFetch(
+  path: string,
+  options: Record<string, unknown> = {},
+  fetchMap: Map<string, FetchLoaderState> = clientFetchMap,
+): Record<string, unknown> {
   const loaderStatus = fetchMap.get(path)
   if (loaderStatus) {
-    if (loaderStatus.error || loaderStatus.data?.statusCode === 500) {
-      if (loaderStatus.data?.statusCode === 500) {
-        throw new Error(loaderStatus.data.message)
+    if (loaderStatus.error || (loaderStatus.data as Record<string, unknown>)?.statusCode === 500) {
+      if ((loaderStatus.data as Record<string, unknown>)?.statusCode === 500) {
+        throw new Error((loaderStatus.data as Record<string, unknown>).message as string)
       }
       throw loaderStatus.error
     }
@@ -51,21 +78,21 @@ export function waitFetch(path, options = {}, fetchMap = clientFetchMap) {
       throw loaderStatus.promise
     }
     fetchMap.delete(path)
-
-    return loaderStatus.data
+    return loaderStatus.data as Record<string, unknown>
   }
-  const loader = {
+
+  const loader: FetchLoaderState = {
     suspended: true,
     error: null,
     data: null,
     promise: null,
   }
-  loader.promise = fetch(path, options)
+  loader.promise = fetch(path, options as RequestInit)
     .then((response) => response.json())
-    .then((loaderData) => {
+    .then((loaderData: Record<string, unknown>) => {
       loader.data = loaderData
     })
-    .catch((loaderError) => {
+    .catch((loaderError: Error) => {
       loader.error = loaderError
     })
     .finally(() => {
