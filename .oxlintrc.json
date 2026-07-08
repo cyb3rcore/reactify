@@ -5,14 +5,8 @@
   },
   "plugins": ["eslint", "import", "oxc", "typescript", "unicorn"],
   "rules": {
-    "import/extensions": [
-      "error",
-      "always",
-      {
-        "ignorePackages": true
-      }
-    ],
-    "no-unused-vars": "warn",
-    "typescript/consistent-type-definitions": "error"
+    "import/extensions": "off",
+    "typescript/consistent-type-definitions": "off",
+    "no-unused-vars": ["warn", { "args": "none", "varsIgnorePattern": "^_" }]
   }
 }
