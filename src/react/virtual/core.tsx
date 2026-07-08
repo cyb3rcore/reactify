@@ -172,6 +172,7 @@ export function RouteProvider({
 
   const navigate = useCallback(
     (to: string | number, options?: { replace?: boolean; state?: any }) => {
+      if (isServer) return
       if (typeof to === 'number') {
         window.history.go(to)
         return
