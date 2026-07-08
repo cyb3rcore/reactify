@@ -181,7 +181,7 @@ export function RouteProvider({
       if (options?.replace) {
         window.history.replaceState(options.state ?? null, '', to)
       } else {
-        window.history.pushState(options.state ?? null, '', to)
+        window.history.pushState(options?.state ?? null, '', to)
       }
       const loc = parseLocation(window.location)
       setLocation(loc)

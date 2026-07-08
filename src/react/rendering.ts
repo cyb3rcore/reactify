@@ -14,8 +14,9 @@ export async function onShellReady(app: ReactNode): Promise<Readable | Error> {
     // but Readable.fromWeb accepts it at runtime. Cast through unknown
     // to bridge the Node.js and Web stream type mismatch.
     return Readable.fromWeb(stream as unknown as import('stream/web').ReadableStream)
-  } catch (error) {
-    return error as Error
+  } catch (error: unknown) {
+    if (error instanceof Error) return error
+    return new Error(String(error))
   }
 }
 
@@ -24,8 +25,9 @@ export async function onAllReady(app: ReactNode): Promise<Readable | Error> {
     const stream = await renderToReadableStream(app)
     await stream.allReady
     return Readable.fromWeb(stream as unknown as import('stream/web').ReadableStream)
-  } catch (error) {
-    return error as Error
+  } catch (error: unknown) {
+    if (error instanceof Error) return error
+    return new Error(String(error))
   }
 }
 
@@ -35,7 +37,13 @@ export async function createRenderFunction({
 }: {
   routes: Array<Record<string, unknown>>
   create: (...args: unknown[]) => ReactNode
-}): Promise<(this: Record<string, unknown>) => Promise<{ routes: Array<Record<string, unknown>>; context: unknown; body?: Readable }>> {
+}): Promise<
+  (this: Record<string, unknown>) => Promise<{
+    routes: Array<Record<string, unknown>>
+    context: unknown
+    body?: Readable | Error
+  }>
+> {
   const routeMap = Object.fromEntries(routes.map((r) => [r.path as string, r]))
   return async function (this: Record<string, unknown>) {
     const req = this.request as Record<string, unknown>
@@ -61,33 +69,58 @@ export async function renderSSR(
   return stream
 }
 
-async function createStreamingResponse(req, routes) {
-  // SSR stream
-  const body = await onShellReady(req.route.app)
-  return { routes, context: req.route, body }
+async function createStreamingResponse(
+  req: Record<string, unknown>,
+  routes: Array<Record<string, unknown>>,
+): Promise<{
+  routes: Array<Record<string, unknown>>
+  context: unknown
+  body: Readable | Error | undefined
+}> {
+  const route = req.route as Record<string, unknown>
+  const body = await onShellReady(route.app as ReactNode)
+  return { routes, context: route, body }
 }
 
-async function createResponse(req, routes) {
-  let body
-  if (!req.route.clientOnly) {
-    // SSR string
-    body = await onAllReady(req.route.app)
+async function createResponse(
+  req: Record<string, unknown>,
+  routes: Array<Record<string, unknown>>,
+): Promise<{
+  routes: Array<Record<string, unknown>>
+  context: unknown
+  body: Readable | Error | undefined
+}> {
+  let body: Readable | Error | undefined
+  const route = req.route as Record<string, unknown>
+  if (!route.clientOnly) {
+    body = await onAllReady(route.app as ReactNode)
   }
-  return { routes, context: req.route, body }
+  return { routes, context: route, body }
 }
 
 // The return value of this function gets registered as reply.html()
-export async function createHtmlFunction(source, _, config) {
+export async function createHtmlFunction(
+  source: string,
+  _: Record<string, unknown>,
+  config: Record<string, unknown>,
+): Promise<(this: Record<string, unknown>) => Promise<Readable | string>> {
   // Creates `universal` and `serverOnly` sets of
   // HTML `beforeElement` and `afterElement` templates
   const templates = createHtmlTemplates(source, config)
 
   // Registered as reply.html()
-  return async function () {
-    const { routes, context, body } = await this.render()
+  return async function (this: Record<string, unknown>) {
+    const result = await (
+      this as unknown as { render: () => Promise<Record<string, unknown>> }
+    ).render()
+    const routes = result.routes as Array<Record<string, unknown>>
+    const context = result.context as Record<string, unknown>
+    const body = result.body as Readable | Error | undefined
 
-    context.useHead.push(context.head)
-    this.type('text/html')
+    const useHead = context.useHead as Parameters<typeof transformHtmlTemplate>[0]
+    const head = context.head
+    useHead.push(head)
+    ;(this as unknown as { type: (s: string) => void }).type('text/html')
 
     // Use template with client module import removed
     if (context.serverOnly) {
@@ -100,10 +133,12 @@ export async function createHtmlFunction(source, _, config) {
     // Embed full hydration script
     context.hydration = `<script>\nwindow.route = ${
       // Server data payload
-      devalue.uneval(context.toJSON())
+      devalue.uneval((context as { toJSON(): Record<string, unknown> }).toJSON())
     }\nwindow.routes = ${
       // Universal router payload
-      devalue.uneval(routes.toJSON())
+      devalue.uneval(
+        (routes as unknown as { toJSON(): Record<string, unknown> }).toJSON(),
+      )
     }\n</script>`
 
     // In all other cases use universal,
@@ -117,22 +152,51 @@ export async function createHtmlFunction(source, _, config) {
   }
 }
 
-export async function sendClientOnlyShell(templates, context) {
+export async function sendClientOnlyShell(
+  templates: {
+    beforeElement: (ctx: Record<string, unknown>) => string
+    afterElement: (ctx: Record<string, unknown>) => string
+  },
+  context: Record<string, unknown>,
+): Promise<string> {
   return await transformHtmlTemplate(
-    context.useHead,
+    context.useHead as Parameters<typeof transformHtmlTemplate>[0],
     `${templates.beforeElement(context)}${templates.afterElement(context)}`,
   )
 }
 
-export function streamShell(templates, context, body) {
+export function streamShell(
+  templates: {
+    beforeElement: (ctx: Record<string, unknown>) => string
+    afterElement: (ctx: Record<string, unknown>) => string
+  },
+  context: Record<string, unknown>,
+  body: Readable | Error | undefined,
+): Readable {
   return Readable.from(createShellStream(templates, context, body))
 }
 
-async function* createShellStream(templates, context, body) {
-  yield await transformHtmlTemplate(context.useHead, templates.beforeElement(context))
+async function* createShellStream(
+  templates: {
+    beforeElement: (ctx: Record<string, unknown>) => string
+    afterElement: (ctx: Record<string, unknown>) => string
+  },
+  context: Record<string, unknown>,
+  body: Readable | Error | undefined,
+): AsyncGenerator<string> {
+  yield await transformHtmlTemplate(
+    context.useHead as Parameters<typeof transformHtmlTemplate>[0],
+    templates.beforeElement(context),
+  )
 
-  for await (const chunk of body) {
-    yield await transformHtmlTemplate(context.useHead, chunk.toString())
+  for await (const chunk of body as Readable) {
+    yield await transformHtmlTemplate(
+      context.useHead as Parameters<typeof transformHtmlTemplate>[0],
+      chunk.toString(),
+    )
   }
-  yield await transformHtmlTemplate(context.useHead, templates.afterElement(context))
+  yield await transformHtmlTemplate(
+    context.useHead as Parameters<typeof transformHtmlTemplate>[0],
+    templates.afterElement(context),
+  )
 }
