@@ -1,11 +1,13 @@
-// @ts-nocheck
-import { createHtmlTemplateFunction, removeHtmlModuleScripts } from '../vite/utils.js'
+import { createHtmlTemplateFunction, removeHtmlModuleScripts } from '../vite/utils'
 
-export function createHtmlTemplates(source, config) {
+export function createHtmlTemplates(source: string, config: Record<string, unknown>): {
+  universal: { beforeElement: (data?: Record<string, unknown>) => string; afterElement: (data?: Record<string, unknown>) => string }
+  serverOnly: { beforeElement: (data?: Record<string, unknown>) => string; afterElement: (data?: Record<string, unknown>) => string }
+} {
   const el = '<!-- element -->'
 
   const universal = source.split(el)
-  const serverOnlyRaw = removeClientModule(source, config)
+  const serverOnlyRaw = removeClientModule(source)
   const serverOnly = serverOnlyRaw.split(el)
 
   return {

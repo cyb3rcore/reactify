@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createContext, useContext, lazy, type ComponentType } from 'react'
 import { useSnapshot } from 'valtio'
 
@@ -17,7 +16,9 @@ export interface RouteContextValue {
 }
 
 export const RouteContext = createContext<RouteContextValue>({})
-export const isServer = typeof window === 'undefined' && typeof process === 'object'
+
+export const isServer =
+  typeof window === 'undefined' && typeof process === 'object'
 
 export function useRouteContext(): RouteContextValue {
   const routeContext = useContext(RouteContext)
@@ -29,32 +30,44 @@ export function useRouteContext(): RouteContextValue {
   return routeContext
 }
 
-declare global {
-  interface Window {
-    routes?: RouteDef[]
-  }
-}
-
+/**
+ * Hydrate routes from server-injected data.
+ *
+ * window.routes carries route metadata serialized by the server
+ * (via Routes.toJSON in server.ts). The fromInput parameter maps
+ * route identifiers to their corresponding async import loaders.
+ * This function attaches lazy-loaded components to each route entry.
+ */
 export async function hydrateRoutes(
-  fromInput: RouteDef[] | Record<string, RouteDef>,
+  fromInput:
+    | Array<{ path: string; id?: string; [key: string]: unknown }>
+    | Record<string, () => Promise<unknown>>,
 ): Promise<RouteDef[]> {
-  let from: Record<string, RouteDef>
+  let loaders: Record<string, () => Promise<unknown>>
   if (Array.isArray(fromInput)) {
-    from = Object.fromEntries(
-      fromInput.map((route) => [route.path as string, route]),
+    loaders = Object.fromEntries(
+      fromInput.map((route) => [route.path, route as unknown as () => Promise<unknown>]),
     )
   } else {
-    from = fromInput
+    loaders = fromInput
   }
-  const windowRoutes = (window as { routes?: unknown[] }).routes ?? []
-  return windowRoutes.map((route) => {
-    const r = route as Record<string, unknown>
-    r.loader = memoImport(from[r.id as string])
-    r.component = lazy(() => (r.loader as () => Promise<unknown>)())
-    return r as unknown as RouteDef
+  return (window.routes ?? []).map((entry) => {
+    const key = String(entry.id ?? entry.path ?? '')
+    const loader = memoImport<{ default: ComponentType<unknown> }>(
+      loaders[key] as () => Promise<{ default: ComponentType<unknown> }>,
+    )
+    return {
+      ...entry,
+      loader,
+      component: lazy(() => loader()),
+    } as unknown as RouteDef
   })
 }
 
+/**
+ * Memoize an async import function so it only loads once.
+ * Symbols are used as property keys on the function object to cache state.
+ */
 function memoImport<T>(func: () => Promise<T>): () => Promise<T> {
   const kFuncExecuted = Symbol('kFuncExecuted')
   const kFuncValue = Symbol('kFuncValue')
