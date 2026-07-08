@@ -1,3 +1,5 @@
+import DefaultLayout from '../layouts/default'
+
 export function getMeta() {
   return { title: 'React base e2e' }
 }
@@ -5,6 +7,8 @@ export function getMeta() {
 export function getData() {
   return { message: 'Hello from getData' }
 }
+
+export const layout = DefaultLayout
 
 export default function Index() {
   return <p>React base e2e</p>

@@ -82,9 +82,11 @@ export async function resolveId(
     // If not a virtual module, resolve as physical file relative to the virtual root.
     // This handles imports like ../router from a virtual module in src/react/virtual/
     // — ../router resolves to src/react/router.ts as a physical file.
+    // Strip any existing .js extension so the resolver can try all source extensions.
+    const normalizedId = id.replace(/\.(?:js|mjs|cjs|ts|tsx|jsx)$/, '')
     const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs']
     for (const ext of extensions) {
-      const physicalPath = resolve(virtualRoot, id + ext)
+      const physicalPath = resolve(virtualRoot, normalizedId + ext)
       if (existsSync(physicalPath)) {
         return physicalPath
       }
