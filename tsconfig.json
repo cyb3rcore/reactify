@@ -8,8 +8,8 @@
     "emitDeclarationOnly": false,
     "jsx": "react-jsx",
     "lib": ["ES2020", "DOM"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "strict": false,
     "outDir": "dist",
     "paths": {
