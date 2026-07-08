@@ -39,7 +39,7 @@ const HEADER_ACTION_ID = 'x-rsc-action'
 interface RouteConfigEntry {
   id: string
   path: string
-  lazy: () => Promise<Record<string, unknown>>
+  lazy: () => Promise<unknown>
 }
 
 interface RenderRequest {
@@ -149,8 +149,10 @@ async function extractHeadMeta(
   if (!loader) return null
   try {
     const routeModule = await loader()
-    if (typeof (routeModule as Record<string, unknown>)?.getMeta === 'function') {
-      return await (routeModule as Record<string, unknown>).getMeta({ url })
+    const mod = routeModule as Record<string, unknown>
+    const getMeta = mod.getMeta
+    if (typeof getMeta === 'function') {
+      return await (getMeta as (args: Record<string, unknown>) => Promise<Record<string, unknown>>)({ url })
     }
   } catch (err) {
     console.warn('[rsc-entry] getMeta error:', err)
@@ -223,7 +225,7 @@ async function extractOnEnter(
  *    to produce full HTML with RSC payload embedded for hydration.
  */
 async function handler(request: Request): Promise<Response> {
-  const valtioState = (request as Record<string, unknown>).__valtioState
+  const valtioState = (request as unknown as Record<string, unknown>).__valtioState
   const renderRequest = parseRenderRequest(request)
 
   // ------------------------------------------------------------------
@@ -359,7 +361,7 @@ async function handler(request: Request): Promise<Response> {
       const { snapshot, getVersion } = await import('valtio')
       const stateSnapshot =
         getVersion(valtioState) !== undefined
-          ? snapshot(valtioState)
+          ? snapshot(valtioState as object)
           : valtioState
       rscPayload.matches[0].element = (
         <ValtioHydrator state={stateSnapshot}>
@@ -405,9 +407,10 @@ async function handler(request: Request): Promise<Response> {
     )
     // Render error using Youch (dev error pages) with fallback
     try {
-      const { Youch } = await import('youch')
-      const youch = new (Youch as any)()
-      const html = await youch.toHTML(error, { title: 'RSC Render Error' })
+      const youchModule = await import('youch')
+      const YouchClass = youchModule.default as unknown as new (error: unknown, request: unknown, options?: Record<string, unknown>) => { toHTML: (data?: Record<string, unknown>) => Promise<string> }
+      const youch = new YouchClass(error, {})
+      const html = await youch.toHTML({ title: 'RSC Render Error' })
       return new Response(html, {
         status: 500,
         headers: { 'Content-Type': 'text/html' },

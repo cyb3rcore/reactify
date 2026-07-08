@@ -2,6 +2,13 @@
 
 import { useState, useEffect, Component, startTransition, useRef, useCallback, type ReactNode } from 'react'
 import { useRouteContext } from './core'
+
+interface RscPayload {
+  matches?: Array<{ element?: ReactNode }>
+  returnValue?: { ok?: boolean; data?: unknown }
+  head?: { title?: string }
+  formState?: unknown
+}
 import {
   createFromFetch,
   setServerCallback,
@@ -59,7 +66,7 @@ export default function RscContent() {
     setServerCallback(async (id: string, args: unknown[]) => {
       const temporaryReferences = createTemporaryReferenceSet()
       const rscUrl = `${window.location.pathname}_.rsc${window.location.search}`
-      const payload = await createFromFetch(
+      const payload = await createFromFetch<RscPayload>(
         fetch(rscUrl, {
           method: 'POST',
           headers: { 'x-rsc-action': id },
@@ -83,7 +90,7 @@ export default function RscContent() {
     setLoading(true)
 
     const rscUrl = `${location.pathname}_.rsc${location.search}`
-    createFromFetch(fetch(rscUrl)).then((payload: any) => {
+    createFromFetch<RscPayload>(fetch(rscUrl)).then((payload) => {
       if (!cancelled) {
         startTransition(() => {
           setElement(payload.matches?.[0]?.element ?? null)
