@@ -1,50 +1,36 @@
 // @ts-nocheck
 import { Readable } from 'node:stream'
-// Helper to make the stream returned renderToPipeableStream()
-// behave like an event emitter and facilitate error handling in Fastify
-import { Minipass } from 'minipass'
-// React 18's preferred server-side rendering function,
+// React 19's streaming server-side rendering function,
 // which enables the combination of React.lazy() and Suspense
 import { createElement } from 'react'
-import { renderToPipeableStream, renderToReadableStream } from 'react-dom/server'
+import { renderToReadableStream } from 'react-dom/server'
 import * as devalue from 'devalue'
 import { transformHtmlTemplate } from '@unhead/react/server'
 import { createHtmlTemplates } from './templating.js'
 import { RouteProvider } from './virtual/core.js'
 import { RouteRenderer } from './virtual/root.js'
 
-// Helper function to get an AsyncIterable (via PassThrough)
-// from the renderToPipeableStream() onShellReady event
-export function onShellReady(app) {
-  const duplex = new Minipass()
-  return new Promise((resolve) => {
-    try {
-      const pipeable = renderToPipeableStream(app, {
-        onShellReady() {
-          resolve(pipeable.pipe(duplex))
-        },
-      })
-    } catch (error) {
-      resolve(error)
-    }
-  })
+// Helper function to get a Readable stream
+// from renderToReadableStream()
+export async function onShellReady(app) {
+  try {
+    const stream = await renderToReadableStream(app)
+    return Readable.fromWeb(stream)
+  } catch (error) {
+    return error
+  }
 }
 
-// Helper function to get an AsyncIterable (via Minipass)
-// from the renderToPipeableStream() onAllReady event
-export function onAllReady(app) {
-  const duplex = new Minipass()
-  return new Promise((resolve) => {
-    try {
-      const pipeable = renderToPipeableStream(app, {
-        onAllReady() {
-          resolve(pipeable.pipe(duplex))
-        },
-      })
-    } catch (error) {
-      resolve(error)
-    }
-  })
+// Helper function to get a Readable stream
+// from renderToReadableStream() after all content is ready
+export async function onAllReady(app) {
+  try {
+    const stream = await renderToReadableStream(app)
+    await stream.allReady
+    return Readable.fromWeb(stream)
+  } catch (error) {
+    return error
+  }
 }
 
 export async function createRenderFunction({ routes, create }) {
