@@ -1,10 +1,10 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import Youch from 'youch'
-import type { ClientModule, ClientEntries } from '../vite/types/client'
-import type { RuntimeConfig } from '../vite/types/options'
-import type { RouteDefinition } from '../vite/types/route'
-import RouteContext from './context'
-import { rscStore } from './rsc-context'
+import type { ClientModule, ClientEntries } from '../vite/types/client.js'
+import type { RuntimeConfig } from '../vite/types/options.js'
+import type { RouteDefinition } from '../vite/types/route.js'
+import RouteContext from './context.js'
+import { rscStore, setSyncContext } from './rsc-context.js'
 
 /**
  * Route metadata specific to the React renderer.
@@ -174,7 +174,7 @@ export async function createRoute(
           server: scope,
         },
         async () => {
-          const { convertRequest, sendResponse } = await import('./rsc-handler')
+          const { convertRequest, sendResponse } = await import('./rsc-handler.js')
           const request = await convertRequest(req)
           const response = await (
             client.rscHandler as { fetch: (req: unknown) => Promise<Response> }
@@ -184,12 +184,24 @@ export async function createRoute(
       )
     }
   } else if (config.dev) {
-    handler = async (_req: FastifyRequest, reply: FastifyReply) => {
-      return reply.html()
+    handler = async (req: FastifyRequest, reply: FastifyReply) => {
+      const ctx = { req, reply, server: scope }
+      setSyncContext(ctx)
+      try {
+        return await reply.html()
+      } finally {
+        setSyncContext(null)
+      }
     }
   } else {
-    handler = async (_req: FastifyRequest, reply: FastifyReply) => {
-      return reply.html()
+    handler = async (req: FastifyRequest, reply: FastifyReply) => {
+      const ctx = { req, reply, server: scope }
+      setSyncContext(ctx)
+      try {
+        return await reply.html()
+      } finally {
+        setSyncContext(null)
+      }
     }
   }
 

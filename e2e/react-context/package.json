@@ -1,0 +1,13 @@
+{
+  "name": "e2e-react-context",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "fastify": "^5.8.5",
+    "reactify": "file:../../"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.16"
+  }
+}
