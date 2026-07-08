@@ -9,7 +9,7 @@ When using `@fastify/compress`, gzip compression strips the `Content-Length` hea
 ## Example
 
 ```javascript
-await server.register(FastifyVite, {
+await server.register(ReactifyVite, {
   root: import.meta.dirname,
   spa: true,
   fastifyStaticOptions: {

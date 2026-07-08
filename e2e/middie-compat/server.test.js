@@ -8,7 +8,7 @@ import { mainMiddieFirst, mainViteFirst } from './server.js'
 // Users should be able to use @fastify/middie with @fastify/vite
 
 test('middie-compat (issue #259)', async (t) => {
-  await t.test('scenario 1: register middie before fastify-vite', async () => {
+  await t.test('scenario 1: register middie before reactify-vite', async () => {
     const server = await mainMiddieFirst(true)
 
     // Test that the server starts
@@ -24,7 +24,7 @@ test('middie-compat (issue #259)', async (t) => {
     await server.close()
   })
 
-  await t.test('scenario 2: use server.use() after fastify-vite ready', async () => {
+  await t.test('scenario 2: use server.use() after reactify-vite ready', async () => {
     const server = await mainViteFirst(true)
 
     // Test that the server starts

@@ -10,7 +10,7 @@ import type { ViteDevServer } from 'vite'
 import type { ModuleRunner } from 'vite/module-runner'
 import fp from 'fastify-plugin'
 import { configure } from './config.ts'
-import { hasIterableRoutes, type ReactifyViteDecorationPriorToSetup } from './mode/support.ts'
+import { hasIterableRoutes, type ReactifyViteDecorationPriorToSetup } from './mode/support'
 import type { ClientEntries, ClientModule } from './types/client.ts'
 import type { HtmlTemplateFunction } from './types/html.ts'
 import type {
