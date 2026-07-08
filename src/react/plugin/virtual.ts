@@ -116,11 +116,14 @@ export function loadVirtualModule(
   if (!virtualModules.includes(virtual)) {
     return
   }
-  // Try exact path first, then append common extensions (resolveId may return
-  // an extensionless path like 'core' when resolving relative imports)
+  // Strip file extension so mount.js matches mount.ts, rsc-entry.js matches rsc-entry.tsx, etc.
+  // resolveId may return an extensionless path like 'core' when resolving relative imports,
+  // and RSC build entries may include extensions like '$app/rsc-entry.js'.
+  const baseName = virtual.replace(/\.\w+$/, '')
+  // Try exact path first, then append common extensions
   const extensions = ['', '.js', '.jsx', '.ts', '.tsx', '.mjs']
   for (const ext of extensions) {
-    const codePath = resolve(virtualRoot, virtual + ext)
+    const codePath = resolve(virtualRoot, baseName + ext)
     try {
       const code = readFileSync(codePath, 'utf8')
       return { code, map: null }
