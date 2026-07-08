@@ -26,6 +26,10 @@
     "./utils": {
       "types": "dist/vite/utils.d.ts",
       "import": "dist/vite/utils.js"
+    },
+    "./renderer": {
+      "types": "dist/react/index.d.ts",
+      "import": "dist/react/index.js"
     }
   },
   "scripts": {
