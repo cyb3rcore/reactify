@@ -1,5 +1,5 @@
 import test from 'node:test'
-import { makeBuildTest, makeIndexTest } from '../test-factories.mjs'
+import { makeBuildTest, makeIndexTest } from '../test-factories.ts'
 import { main } from './server.js'
 
 const cwd = import.meta.dirname

@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import { setTimeout } from 'node:timers/promises'
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { makeBuildTest } from '../test-factories.mjs'
+import { makeBuildTest } from '../test-factories.ts'
 import { main } from './server.js'
 
 const cwd = import.meta.dirname
