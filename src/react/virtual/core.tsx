@@ -10,16 +10,16 @@ import {
 import { matchRoute, parseLocation, type ParsedLocation } from '../router'
 
 const isServer = typeof window === 'undefined'
-const routeMapRef: { current: Record<string, any> } = { current: {} }
+const routeMapRef: { current: Record<string, unknown> } = { current: {} }
 
 export interface RouteDef {
   path: string
   id?: string
-  component?: React.ComponentType<any>
+  component?: React.ComponentType<Record<string, unknown>>
   layout?: React.ComponentType<{ children: ReactNode }>
-  getData?: (ctx: any) => Promise<Record<string, any>>
-  getMeta?: (ctx: any) => Promise<any>
-  onEnter?: (ctx: any) => Promise<any>
+  getData?: (ctx: Record<string, unknown>) => Promise<Record<string, unknown>>
+  getMeta?: (ctx: Record<string, unknown>) => Promise<Record<string, unknown>>
+  onEnter?: (ctx: Record<string, unknown>) => Promise<unknown>
   rsc?: boolean
 }
 
@@ -27,8 +27,8 @@ export interface RouteContextValue {
   location: ParsedLocation
   match: RouteDef | null
   params: Record<string, string>
-  navigate: (to: string | number, options?: { replace?: boolean; state?: any }) => void
-  route: Record<string, any> | null
+  navigate: (to: string | number, options?: { replace?: boolean; state?: unknown }) => void
+  route: Record<string, unknown> | null
 }
 
 const RouterCtx = createContext<RouteContextValue | null>(null)
@@ -57,7 +57,7 @@ export function useRouteHead() {
   return route?.head ?? null
 }
 
-async function waitFetch(url: string): Promise<any> {
+async function waitFetch(url: string): Promise<Record<string, unknown>> {
   const cacheBuster = `_t=${Date.now()}`
   const separator = url.includes('?') ? '&' : '?'
   const response = await fetch(`${url}${separator}${cacheBuster}`)
@@ -68,8 +68,8 @@ async function waitFetch(url: string): Promise<any> {
 export interface RouteProviderProps {
   routes: RouteDef[]
   location?: string
-  ctxHydration?: Record<string, any>
-  routeMap?: Record<string, any>
+  ctxHydration?: Record<string, unknown>
+  routeMap?: Record<string, unknown>
   children: ReactNode
 }
 
@@ -96,7 +96,7 @@ export function RouteProvider({
         return {
           location: loc,
           match: result ?? { route: null, params: {} },
-          route: (window as any).route ?? serverHydration ?? null,
+          route: window.route ?? serverHydration ?? null,
         }
       })()
 
@@ -105,7 +105,7 @@ export function RouteProvider({
     route: initialRoute.match.route,
     params: initialRoute.match.params,
   })
-  const [routeData, setRouteData] = useState<Record<string, any> | null>(initialRoute.route)
+  const [routeData, setRouteData] = useState<Record<string, unknown> | null>(initialRoute.route)
   const firstRenderRef = useRef(true)
   if (routeMap) routeMapRef.current = routeMap
 
@@ -119,13 +119,13 @@ export function RouteProvider({
 
     const loadData = async () => {
       const route = match.route!
-      const state: Record<string, any> = { data: {} }
+      const state: Record<string, unknown> = { data: {} }
 
       if (route.getData) {
         try {
           const result = await waitFetch(`/-/data${location.pathname}`)
           state.data = result
-        } catch (err) {
+        } catch (err: unknown) {
           console.error('[RouteProvider] getData error:', err)
         }
       }
@@ -151,8 +151,9 @@ export function RouteProvider({
   // Client-side: delegated link interception for SPA navigation
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      const link = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null
-      if (!link) return
+      if (!(e.target instanceof HTMLElement)) return
+      const link = e.target.closest('a[href]')
+      if (!(link instanceof HTMLAnchorElement)) return
       if (e.metaKey || e.ctrlKey || e.button === 1) return
       if (link.target === '_blank') return
       const url = new URL(link.href)
@@ -171,7 +172,7 @@ export function RouteProvider({
   }, [routes])
 
   const navigate = useCallback(
-    (to: string | number, options?: { replace?: boolean; state?: any }) => {
+    (to: string | number, options?: { replace?: boolean; state?: unknown }) => {
       if (isServer) return
       if (typeof to === 'number') {
         window.history.go(to)

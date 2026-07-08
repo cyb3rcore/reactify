@@ -15,9 +15,10 @@ import {
   decodeAction,
   decodeFormState,
 } from '@vitejs/plugin-rsc/rsc'
-import { createElement, type ReactNode } from 'react'
+import { createElement, type ComponentType, type ReactNode } from 'react'
 import { matchRoute } from '../router'
 import { getContext } from '../rsc-context'
+import type { RscAttachedRequest } from '../rsc-handler'
 import routesManifest from '$app/routes.js'
 import ValtioHydrator from '$app/valtio-hydrator.jsx'
 
@@ -35,6 +36,17 @@ const HEADER_ACTION_ID = 'x-rsc-action'
 // -------------------------------------------------------------------------
 // Types
 // -------------------------------------------------------------------------
+
+/**
+ * Shape of a page module loaded via Vite's import.meta.glob.
+ * Each route's lazy() resolves to a module with optional lifecycle exports.
+ * Cast at this boundary once; use typed properties everywhere downstream.
+ */
+interface PageModule {
+  default?: ComponentType<Record<string, unknown>>
+  getMeta?: (opts: { url: URL }) => Promise<Record<string, unknown>>
+  onEnter?: (ctx: Record<string, unknown>) => Promise<unknown>
+}
 
 interface RouteConfigEntry {
   id: string
@@ -148,13 +160,11 @@ async function extractHeadMeta(
   const loader = routesManifest[routeId]
   if (!loader) return null
   try {
-    const routeModule = await loader()
-    const mod = routeModule as Record<string, unknown>
-    const getMeta = mod.getMeta
-    if (typeof getMeta === 'function') {
-      return await (getMeta as (args: Record<string, unknown>) => Promise<Record<string, unknown>>)({ url })
+    const routeModule = (await loader()) as PageModule
+    if (typeof routeModule.getMeta === 'function') {
+      return await routeModule.getMeta({ url })
     }
-  } catch (err) {
+  } catch (err: unknown) {
     console.warn('[rsc-entry] getMeta error:', err)
   }
   return null
@@ -182,9 +192,8 @@ async function extractOnEnter(
   const loader = routesManifest[routeId]
   if (!loader) return null
   try {
-    const routeModule = await loader()
-    const mod = routeModule as Record<string, unknown>
-    if (typeof mod?.onEnter === 'function') {
+    const routeModule = (await loader()) as PageModule
+    if (typeof routeModule.onEnter === 'function') {
       const leafMatch = payload?.matches?.slice(-1)[0]
       const rscCtx = getContext()
       const ctx: Record<string, unknown> = {
@@ -196,14 +205,14 @@ async function extractOnEnter(
         req: rscCtx?.req ?? null,
         reply: rscCtx?.reply ?? null,
         firstRender: true,
-        getMeta: !!mod.getMeta,
+        getMeta: !!routeModule.getMeta,
         getData: false,
         onEnter: true,
       }
-      const result = await (mod.onEnter as (ctx: Record<string, unknown>) => Promise<unknown>)(ctx)
+      const result = await routeModule.onEnter(ctx)
       return (result ?? null) as Record<string, unknown> | null
     }
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[rsc-entry] onEnter error:', err)
   }
   return null
@@ -225,7 +234,12 @@ async function extractOnEnter(
  *    to produce full HTML with RSC payload embedded for hydration.
  */
 async function handler(request: Request): Promise<Response> {
-  const valtioState = (request as unknown as Record<string, unknown>).__valtioState
+  // Boundary: request is a standard Request with runtime properties
+  // attached by rsc-handler.ts (convertRequest). The RscAttachedRequest
+  // interface captures these additional properties so downstream code
+  // can access them without repeated casts.
+  const rscRequest = request as RscAttachedRequest
+  const valtioState = rscRequest.__valtioState
   const renderRequest = parseRenderRequest(request)
 
   // ------------------------------------------------------------------
@@ -250,7 +264,7 @@ async function handler(request: Request): Promise<Response> {
       try {
         const data = await action.apply(null, args)
         returnValue = { ok: true, data }
-      } catch (e) {
+      } catch (e: unknown) {
         returnValue = { ok: false, data: e }
         actionStatus = 500
       }
@@ -298,7 +312,11 @@ async function handler(request: Request): Promise<Response> {
     }
 
     const matchedRoute = matchResult.route as RouteConfigEntry
-    const routeModule = (await matchedRoute.lazy()) as Record<string, unknown>
+    // Boundary: matchedRoute.lazy() returns Promise<unknown> from
+    // the Vite import.meta.glob result. Cast once to PageModule;
+    // typed properties (getMeta, default, onEnter) are used
+    // without further assertions.
+    const routeModule = (await matchedRoute.lazy()) as PageModule
 
     // Execute onEnter and extract head metadata from the matched leaf route
     let head: unknown = null
@@ -326,14 +344,15 @@ async function handler(request: Request): Promise<Response> {
 
     // Merge onEnterData into valtioState so client components can read it
     if (onEnterData && valtioState) {
-      Object.assign(valtioState as Record<string, unknown>, onEnterData)
+      Object.assign(valtioState, onEnterData)
     }
 
-    // Create a React element from the route module's default export
-    const Component = routeModule.default as
-      | React.ComponentType<Record<string, unknown>>
-      | undefined
-    const element: ReactNode = Component ? createElement(Component) : null
+    // Create a React element from the route module's default export.
+    // routeModule is typed as PageModule from the boundary cast above,
+    // so default is already ComponentType<...> | undefined.
+    const element: ReactNode = routeModule.default
+      ? createElement(routeModule.default)
+      : null
 
     // Build the RSC payload (analogous to what react-router's RSC router produces)
     const rscPayload: RscPayload = {
@@ -361,7 +380,7 @@ async function handler(request: Request): Promise<Response> {
       const { snapshot, getVersion } = await import('valtio')
       const stateSnapshot =
         getVersion(valtioState) !== undefined
-          ? snapshot(valtioState as object)
+          ? snapshot(valtioState)
           : valtioState
       rscPayload.matches[0].element = (
         <ValtioHydrator state={stateSnapshot}>
@@ -382,7 +401,7 @@ async function handler(request: Request): Promise<Response> {
     }
 
     // Delegate to SSR environment for full document (HTML) requests
-    const ssrEntry = await (import.meta as Record<string, any>).viteRsc.import(
+    const ssrEntry = await import.meta.viteRsc.import<{ generateHTML: (request: Request, rscResponse: Response) => Promise<Response> }>(
       './ssr-entry.jsx',
       { environment: 'ssr' },
     )
@@ -397,19 +416,27 @@ async function handler(request: Request): Promise<Response> {
     }
 
     return htmlResult
-  } catch (error) {
-    const err = error as Error
-    console.error(
-      '[rsc-entry] handler error:',
-      err?.constructor?.name,
-      err?.message,
-      err?.stack?.split('\n').slice(0, 4).join('\n'),
-    )
-    // Render error using Youch (dev error pages) with fallback
+  } catch (error: unknown) {
+    // Narrow caught error for logging — prefer instanceof to assertion
+    const loggable =
+      error instanceof Error
+        ? `${error.constructor.name}: ${error.message}\n${error.stack?.split('\n').slice(0, 4).join('\n')}`
+        : String(error)
+    console.error('[rsc-entry] handler error:', loggable)
+
+    // Render error using Youch (dev error pages) with fallback.
+    // Boundary: Youch's generic params (Error, Request) shadow the
+    // global Error and Request types, making constructor inference
+    // unreliable. The runtime import resolves to a class whose
+    // constructor accepts (error, request, options?). This cast
+    // is isolated to this one helper call.
     try {
       const youchModule = await import('youch')
-      const YouchClass = youchModule.default as unknown as new (error: unknown, request: unknown, options?: Record<string, unknown>) => { toHTML: (data?: Record<string, unknown>) => Promise<string> }
-      const youch = new YouchClass(error, {})
+      const YouchCtor = youchModule.default as unknown as new (
+        error: unknown,
+        request: unknown,
+      ) => { toHTML: (data?: Record<string, unknown>) => Promise<string> }
+      const youch = new YouchCtor(error, {})
       const html = await youch.toHTML({ title: 'RSC Render Error' })
       return new Response(html, {
         status: 500,
@@ -417,10 +444,9 @@ async function handler(request: Request): Promise<Response> {
       })
     } catch {
       const errorText =
-        err?.message ??
-        (typeof error === 'string'
-          ? error
-          : String(error) || 'Unknown error')
+        error instanceof Error
+          ? error.message
+          : String(error) || 'Unknown error'
       return new Response(
         `<html><body><h1>500 — Internal Server Error</h1><pre>${errorText}</pre></body></html>`,
         {
@@ -434,6 +460,6 @@ async function handler(request: Request): Promise<Response> {
 
 export default { fetch: handler }
 
-if ((import.meta as Record<string, any>).hot) {
-  ;(import.meta as Record<string, any>).hot.accept()
+if (import.meta.hot) {
+  import.meta.hot.accept()
 }
