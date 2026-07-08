@@ -1,0 +1,15 @@
+{
+  "name": "e2e-react-base",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "fastify": "^5.8.5",
+    "reactify": "file:../../"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.16"
+  }
+}
