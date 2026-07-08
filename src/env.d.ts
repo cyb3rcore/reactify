@@ -31,29 +31,4 @@ declare module './react/context.js' {
   export default RouteContext
 }
 
-// Module augmentation for React Router Route component paths
-declare module 'react-router' {
-  interface RouteMeta {
-    path?: string
-  }
-}
 
-// Re-declare react-router to fix TypeScript resolution issues
-declare module 'react-router' {
-  import type { ComponentType, ReactNode } from 'react'
-  export const BrowserRouter: ComponentType<{
-    basename?: string
-    children?: ReactNode
-    window?: Window
-  }>
-  export const StaticRouter: ComponentType<{
-    basename?: string
-    children?: ReactNode
-    location?: string
-  }>
-  export function useLocation(): { pathname: string; search: string; hash: string; state: unknown; key: string }
-  export function useNavigate(): (to: string) => void
-  export const Route: ComponentType<{ path?: string; element?: ReactNode }>
-  export const Routes: ComponentType<{ children?: ReactNode }>
-  export { Suspense } from 'react'
-}

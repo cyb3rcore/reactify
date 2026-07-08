@@ -1,26 +1,42 @@
-// @ts-nocheck
-import { Suspense } from 'react'
-import { Route, Routes } from 'react-router'
-import { AppRoute, Router } from '$app/core'
+import { type ReactNode } from 'react'
+import { useRouteContext } from './core'
 
-export default function Root({ url, routes, head, ctxHydration, routeMap }) {
+interface RouteRendererProps {
+  notFound?: React.ComponentType
+}
+
+export function RouteRenderer({ notFound: NotFound }: RouteRendererProps) {
+  const { match, params, route: routeData } = useRouteContext()
+
+  if (!match) {
+    if (NotFound) return <NotFound />
+    return null
+  }
+
+  const Component = match.component
+  const Layout = match.layout ?? DefaultLayout
+
+  if (!Component) return null
+
   return (
-    <Suspense>
-      <Router location={url}>
-        <Routes>
-          {routes.map(({ path, component: Component }) => (
-            <Route
-              key={path}
-              path={path}
-              element={
-                <AppRoute head={head} ctxHydration={ctxHydration} ctx={routeMap[path]}>
-                  <Component />
-                </AppRoute>
-              }
-            />
-          ))}
-        </Routes>
-      </Router>
-    </Suspense>
+    <AppRoute route={routeData} params={params}>
+      <Layout params={params}>
+        <Component params={params} data={routeData?.data ?? {}} />
+      </Layout>
+    </AppRoute>
   )
+}
+
+function DefaultLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>
+}
+
+interface AppRouteProps {
+  route: Record<string, any> | null
+  params: Record<string, string>
+  children: ReactNode
+}
+
+export function AppRoute({ route, params, children }: AppRouteProps) {
+  return <>{children}</>
 }
