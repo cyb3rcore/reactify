@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert'
 import { setTimeout } from 'node:timers/promises'
-import { makeBuildTest } from '../test-factories.mjs'
+import { makeBuildTest } from '../test-factories.ts'
 import { main } from './server.js'
 
 const cwd = import.meta.dirname
