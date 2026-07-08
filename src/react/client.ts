@@ -6,13 +6,11 @@ export interface RouteDef {
   component?: ComponentType<unknown>
   loader?: () => Promise<{ default: ComponentType<unknown> }>
   id?: string
-  [key: string]: unknown
 }
 
 export interface RouteContextValue {
   state?: Record<string, unknown>
   snapshot?: Record<string, unknown>
-  [key: string]: unknown
 }
 
 export const RouteContext = createContext<RouteContextValue>({})

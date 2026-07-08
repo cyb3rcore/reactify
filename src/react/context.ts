@@ -11,13 +11,11 @@ interface RouteDef {
   streaming?: boolean
   clientOnly?: boolean
   serverOnly?: boolean
-  [key: string]: unknown
 }
 
 interface ContextInit {
   state?: () => Record<string, unknown>
   default?: (ctx: RouteContext) => Promise<void>
-  [key: string]: unknown
 }
 
 const routeContextInspect = Symbol.for('nodejs.util.inspect.custom')
@@ -116,7 +114,12 @@ export default class RouteContext {
     const { default: _, ...extra } = initial
     for (const [prop, value] of Object.entries(extra)) {
       if (prop !== 'data' && prop !== 'state') {
-        Object.defineProperty(RouteContext.prototype, prop, value as PropertyDescriptor)
+        Object.defineProperty(RouteContext.prototype, prop, {
+          value,
+          writable: true,
+          configurable: true,
+          enumerable: false,
+        })
       }
     }
   }

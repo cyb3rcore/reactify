@@ -1,4 +1,4 @@
-// Vite environment types
+// Vite environment types + RSC plugin runtime extensions on import.meta
 interface ImportMeta {
   env: {
     SSR: boolean
@@ -6,17 +6,6 @@ interface ImportMeta {
   }
   glob(pattern: string): Record<string, () => Promise<unknown>>
   globEager(pattern: string): Record<string, unknown>
-}
-
-// Window extensions for React hydration
-interface Window {
-  route: Record<string, unknown>
-  routes: Array<Record<string, unknown>>
-  __FLIGHT_DATA?: unknown[]
-}
-
-// RSC plugin runtime extensions on import.meta
-interface ImportMeta {
   readonly viteRsc: {
     import: <T>(
       specifier: string,
@@ -32,6 +21,13 @@ interface ImportMeta {
     dispose(cb: (data: unknown) => void): void
     invalidate(): void
   }
+}
+
+// Window extensions for React hydration
+interface Window {
+  route: Record<string, unknown>
+  routes: Array<Record<string, unknown>>
+  __FLIGHT_DATA?: unknown[]
 }
 
 // @unhead/react with query parameter
@@ -54,13 +50,11 @@ declare module './react/context.js' {
     streaming?: boolean
     clientOnly?: boolean
     serverOnly?: boolean
-    [key: string]: unknown
   }
 
   interface _ContextInit {
     state?: () => Record<string, unknown>
     default?: (ctx: RouteContext) => Promise<void>
-    [key: string]: unknown
   }
 
   class RouteContext {
