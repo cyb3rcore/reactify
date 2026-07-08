@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { readFileSync } from 'node:fs'
 import { join, isAbsolute } from 'node:path'
+import type { FastifyRequest, FastifyReply, FastifyInstance } from 'fastify'
 import Youch from 'youch'
-import RouteContext from './context.js'
-import { createHtmlFunction } from './rendering.js'
+import RouteContext from './context'
+import { createHtmlFunction } from './rendering'
 import { rscStore } from './rsc-context'
 
 export async function prepareClient(entries, _) {

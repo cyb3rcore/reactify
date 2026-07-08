@@ -1,59 +1,61 @@
-// @ts-nocheck
 import { Readable } from 'node:stream'
-// React 19's streaming server-side rendering function,
-// which enables the combination of React.lazy() and Suspense
-import { createElement } from 'react'
+import { createElement, type ReactNode } from 'react'
 import { renderToReadableStream } from 'react-dom/server'
 import * as devalue from 'devalue'
 import { transformHtmlTemplate } from '@unhead/react/server'
-import { createHtmlTemplates } from './templating.js'
-import { RouteProvider } from './virtual/core.js'
-import { RouteRenderer } from './virtual/root.js'
+import { createHtmlTemplates } from './templating'
+import { RouteProvider, type RouteDef } from './virtual/core'
+import { RouteRenderer } from './virtual/root'
 
-// Helper function to get a Readable stream
-// from renderToReadableStream()
-export async function onShellReady(app) {
+export async function onShellReady(app: ReactNode): Promise<Readable | Error> {
   try {
     const stream = await renderToReadableStream(app)
-    return Readable.fromWeb(stream)
+    // ReactDOMServerReadableStream is not a standard Web ReadableStream,
+    // but Readable.fromWeb accepts it at runtime. Cast through unknown
+    // to bridge the Node.js and Web stream type mismatch.
+    return Readable.fromWeb(stream as unknown as import('stream/web').ReadableStream)
   } catch (error) {
-    return error
+    return error as Error
   }
 }
 
-// Helper function to get a Readable stream
-// from renderToReadableStream() after all content is ready
-export async function onAllReady(app) {
+export async function onAllReady(app: ReactNode): Promise<Readable | Error> {
   try {
     const stream = await renderToReadableStream(app)
     await stream.allReady
-    return Readable.fromWeb(stream)
+    return Readable.fromWeb(stream as unknown as import('stream/web').ReadableStream)
   } catch (error) {
-    return error
+    return error as Error
   }
 }
 
-export async function createRenderFunction({ routes, create }) {
-  // Used when hydrating React Router on the client
-  const routeMap = Object.fromEntries(routes.map((_) => [_.path, _]))
-
-  // Registered as reply.render()
-  return function () {
-    if (this.request.route.streaming) {
-      return createStreamingResponse(this.request, routes, routeMap, create)
+export async function createRenderFunction({
+  routes,
+  create,
+}: {
+  routes: Array<Record<string, unknown>>
+  create: (...args: unknown[]) => ReactNode
+}): Promise<(this: Record<string, unknown>) => Promise<{ routes: Array<Record<string, unknown>>; context: unknown; body?: Readable }>> {
+  const routeMap = Object.fromEntries(routes.map((r) => [r.path as string, r]))
+  return async function (this: Record<string, unknown>) {
+    const req = this.request as Record<string, unknown>
+    if ((req.route as Record<string, unknown>)?.streaming) {
+      return createStreamingResponse(req, routes)
     }
-    return createResponse(this.request, routes, routeMap, create)
+    return createResponse(req, routes)
   }
 }
 
 /**
  * Standalone SSR render using RouteProvider + RouteRenderer.
  */
-export async function renderSSR(url: string, routes: any[], options?: { bootstrapScripts?: string[] }) {
+export async function renderSSR(
+  url: string,
+  routes: RouteDef[],
+  options?: { bootstrapScripts?: string[] },
+): Promise<ReadableStream<Uint8Array>> {
   const stream = await renderToReadableStream(
-    createElement(RouteProvider, { routes, location: url },
-      createElement(RouteRenderer),
-    ),
+    createElement(RouteProvider, { routes, location: url, children: createElement(RouteRenderer) }),
     { bootstrapScripts: options?.bootstrapScripts ?? ['/assets/client.js'] },
   )
   return stream
