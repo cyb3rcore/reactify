@@ -67,7 +67,11 @@ export function matchPath(pattern: string, pathname: string): Record<string, str
   if (!match) return null
   const params: Record<string, string> = {}
   for (let i = 0; i < paramNames.length; i++) {
-    params[paramNames[i]] = decodeURIComponent(match[i + 1])
+    try {
+      params[paramNames[i]] = decodeURIComponent(match[i + 1])
+    } catch {
+      params[paramNames[i]] = match[i + 1]
+    }
   }
   return params
 }
