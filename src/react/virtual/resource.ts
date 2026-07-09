@@ -35,7 +35,11 @@ export function waitResource<T>(
   }
 
   if (!promise) {
-    throw new Error('waitResource: no cached entry and no promise provided')
+    // If the cache entry is missing on re-entry, re-throw the suspended
+    // promise instead of a generic Error — this keeps Suspense working
+    // correctly even if the resource map was mutated between suspend and re-entry
+    const suspendedPromise = resourceMap.get(resourceId)?.promise
+    throw suspendedPromise ?? new Error('Resource not found')
   }
 
   const loader: LoaderState<T> = {

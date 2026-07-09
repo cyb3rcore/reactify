@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { filePathToRoutePath } from './route-utils.js'
 
 /** Known properties exported by a route page module. */
 export interface RouteExports {
@@ -115,12 +116,7 @@ export async function createRoutes(
           (routeModule) => {
             const routePath: string =
               (routeModule.path as string) ??
-              path
-                .slice(6, -4)
-                .replace(param, (_, m: string) => `:${m}`)
-                .replace(/:\w+\+/, () => `*`)
-                .replace(/\/index$/, '/')
-                .replace(/(.+)\/+$/, (...m: string[]) => m[1])
+              filePathToRoutePath(path) ?? '/'
             const routeName: string =
               (routeModule.name as string) ??
               path
