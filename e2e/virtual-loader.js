@@ -50,7 +50,6 @@ export function load(url, context, nextLoad) {
   // Intercept file loads from @vitejs/plugin-rsc package
   if (url.includes('@vitejs/plugin-rsc')) {
     const subpath = url.split('@vitejs/plugin-rsc/dist/')[1]?.replace(/\.js$/, '') || 'index'
-    const name = subpath.replace(/[^a-z0-9]/gi, '-')
     return {
       format: 'module',
       source: pluginRscMockCode,

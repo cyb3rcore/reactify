@@ -122,7 +122,6 @@ export async function setup(
   // Store fallback runners keyed by environment name to avoid creating new ones per call
   const fallbackRunners = new Map<string, ReturnType<typeof createServerModuleRunner>>()
   if (globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__) {
-    const originalImport = globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__
     globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__ = async (environmentName: string, id: string) => {
       const env = reactifyViteDecoration.devServer!.environments[environmentName]
       if (!env) throw new Error(`[reactify] unknown environment '${environmentName}'`)
