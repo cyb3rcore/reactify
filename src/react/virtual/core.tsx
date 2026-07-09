@@ -96,6 +96,11 @@ export function RouteProvider({
         return {
           location: loc,
           match: result ?? { route: null, params: {} },
+          // window.route is set by the server's inline <script> in the HTML template
+          // (rendering.ts serializes route data before the module script tag).
+          // The inline script runs synchronously during HTML parsing, so it's
+          // guaranteed to execute before the module script. If the template order
+          // changes, window.route may be undefined at this point.
           route: window.route ?? serverHydration ?? null,
         }
       })()

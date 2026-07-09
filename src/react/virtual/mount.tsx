@@ -159,16 +159,4 @@ export function mount(routes: RouteDef[], rootId = 'root') {
   )
 }
 
-// Auto-hydrate on RSC pages when $app/mount.js is loaded as a module script.
-// The HTML template includes <script type="module" src="$app/mount.js"> and
-// ssr-entry.tsx strips the _R_ bootstrap script for RSC pages, so this
-// top-level call performs the initial RSC hydration.
-if (typeof window !== 'undefined' && window.__FLIGHT_DATA) {
-  const targetElem = document.getElementById('root')
-  if (targetElem && !_hydrated) {
-    _hydrated = true
-    hydrateRsc(targetElem).catch((err) => {
-      console.error('[mount] RSC auto-hydration failed:', err)
-    })
-  }
-}
+
