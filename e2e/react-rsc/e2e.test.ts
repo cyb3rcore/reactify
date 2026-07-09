@@ -64,8 +64,12 @@ test.describe('RSC e2e', () => {
   })
 
   test('Error boundary catches server errors', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (err) => errors.push(err.message))
+
     await page.goto(`${BASE_URL}/error`)
     await expect(page.getByText('RSC error boundary test')).toBeVisible({ timeout: 10000 })
+    expect(errors).toEqual([])
   })
 
   test('Client navigation to RSC page', async ({ page }) => {

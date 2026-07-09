@@ -12,6 +12,7 @@ export function makeIndexTest({ main, dev }: { main: MainFn; dev?: boolean }) {
       expect(res.body).toBeDefined()
       expect(res.headers['content-type']).toBeDefined()
       expect(res.headers['content-type']).toContain('text/html')
+      expect(res.body).toContain('<!doctype html>')
     } finally {
       await server.close()
     }
