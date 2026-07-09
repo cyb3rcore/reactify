@@ -3,6 +3,17 @@ import { hydrateRoot } from 'react-dom/client'
 import { RouteProvider, type RouteDef } from './core.js'
 import { RouteRenderer } from './root.js'
 
+declare global {
+  interface Window {
+    __rscSetPayload?: (v: unknown) => void
+    $RefreshReg$?: () => void
+    $RefreshSig$?: (type: unknown) => unknown
+    __vite_plugin_react_preamble_installed__?: boolean
+    __vite_rsc_require__?: (id: string) => unknown
+    __webpack_require__?: ((id: string) => unknown) & { u?: () => void }
+  }
+}
+
 /**
  * Set React Refresh preamble flags at module level.
  *
@@ -18,9 +29,9 @@ import { RouteRenderer } from './root.js'
  * We set it here instead.
  */
 if (typeof window !== 'undefined') {
-  ;(window as any).$RefreshReg$ = () => {}
-  ;(window as any).$RefreshSig$ = () => (type: any) => type
-  ;(window as any).__vite_plugin_react_preamble_installed__ = true
+  window.$RefreshReg$ = () => {}
+  window.$RefreshSig$ = () => (type: any) => type
+  window.__vite_plugin_react_preamble_installed__ = true
 }
 
 /**
@@ -87,7 +98,7 @@ async function hydrateRsc(targetElem: Element): Promise<void> {
     // for client-side navigations; for initial page hydration we
     // must register it here.
     useEffect(() => {
-      ;(window as any).__rscSetPayload = (v: unknown) =>
+      window.__rscSetPayload = (v: unknown) =>
         startTransition(() => setPayload(v))
       setServerCallback(async (id: string, args: unknown[]) => {
         const { createTemporaryReferenceSet, encodeReply, createFromFetch } =
