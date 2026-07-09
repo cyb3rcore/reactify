@@ -112,11 +112,31 @@ function patchUseActionState(source: string): string | null {
       const rest = items.filter((s: string) => s !== 'useActionState')
       const lines: string[] = []
       if (rest.length > 0) lines.push(`import { ${rest.join(', ')} } from 'react'`)
-      // Inline shim: returns [initialState, action] for server-side rendering.
+      // Inline shim: returns [state, action] for server-side rendering.
       // The react-server-dom-webpack-server rejects useActionState, so we
       // bypass the dispatcher entirely and provide a simple implementation.
+      // Checks globalThis.__rsc_formState which rsc-entry.tsx sets before
+      // re-rendering after a server action, so the element tree in the RSC
+      // payload reflects the updated state.
       lines.push(
-        `const useActionState = (action, initialState, permalink) => [initialState, action]`,
+        `const useActionState = (action, initialState, permalink) => {
+          const fs = typeof globalThis !== 'undefined' ? globalThis.__rsc_formState : undefined;
+          globalThis.__rsc_formState = undefined;
+          if (fs !== undefined) {
+            // Store the updated state for the server action handler so it
+            // can use it as the previous state on the next action call.
+            if (typeof globalThis !== 'undefined') {
+              globalThis.__rsc_lastActionState = fs;
+            }
+            return [fs, action];
+          }
+          // Initial (non-action) render: store the initial state so the
+          // server action handler can use it as the first prev state.
+          if (typeof globalThis !== 'undefined' && globalThis.__rsc_lastActionState === undefined) {
+            globalThis.__rsc_lastActionState = initialState;
+          }
+          return [initialState, action];
+        }`,
       )
       return lines.join('\n')
     },
@@ -295,6 +315,13 @@ function config(
         ...clientResolve,
         alias: [...clientAliases, rscPkgAlias],
       }
+    }
+    // Prevent Rolldown scanner from trying to pre-bundle $app/ virtual modules
+    const clientOptimizeDeps = (clientEnv.optimizeDeps ?? {}) as Record<string, unknown>
+    const existingExclude = (clientOptimizeDeps.exclude as string[]) ?? []
+    if (!existingExclude.includes('$app/*')) {
+      clientOptimizeDeps.exclude = [...existingExclude, '$app/*']
+      clientEnv.optimizeDeps = clientOptimizeDeps
     }
     // Also set at the top level for Vite's optimizer
     const topAliases = ((rawConfig.resolve as Record<string, unknown>)?.alias ?? []) as Array<Record<string, unknown>>

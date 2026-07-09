@@ -100,13 +100,19 @@ export function viteFastify(options: ViteFastifyPluginOptions = {}): Plugin {
         Object.entries(resolvedConfig.environments)
           .map(([env, envConfig]) => {
             const envBuild = envConfig.build as
-              | { outDir?: string; rollupOptions?: { input?: { index?: string } } }
+              | { outDir?: string; rollupOptions?: { input?: Record<string, string> } }
               | undefined
             if (envBuild?.outDir) {
               fastify.outDirs![env] = envBuild.outDir
             }
-            if (envBuild?.rollupOptions?.input?.index) {
-              return [env, envBuild.rollupOptions.input.index]
+            if (envBuild?.rollupOptions?.input) {
+              // Capture the first (or primary) entry path. The SSR environment
+              // uses key "index" for '$app/index.ts'. The RSC environment uses
+              // key "rsc-entry" for '$app/rsc-entry.jsx'. We take the first
+              // truthy value regardless of key name.
+              const values = Object.values(envBuild.rollupOptions.input)
+              const entry = values.find(Boolean) as string | undefined
+              if (entry) return [env, entry]
             }
             return false
           })

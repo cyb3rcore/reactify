@@ -50,6 +50,19 @@ class Routes extends Array<RouteRecord> {
 }
 
 export function prepareServer(server: FastifyInstance): void {
+  // Register multipart/form-data content type parser so Fastify accepts
+  // RSC server action requests. @vitejs/plugin-rsc's encodeReply creates
+  // FormData payloads for server actions; Fastify rejects multipart by
+  // default with "Unsupported Media Type". We buffer the raw body so the
+  // RSC handler's convertRequest can attach it to the internal Request.
+  server.addContentTypeParser(
+    'multipart/form-data',
+    { parseAs: 'buffer' },
+    (_req: unknown, body: Buffer, done: (err: Error | null, body?: Buffer) => void) => {
+      done(null, body)
+    },
+  )
+
   let url: string | undefined
   server.decorate('serverURL', { getter: () => url })
   server.addHook('onListen', () => {

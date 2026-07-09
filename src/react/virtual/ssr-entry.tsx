@@ -54,7 +54,13 @@ function loadHtmlTemplate(): string {
     }
   }
   // Fallback template
-  return '<!doctype html>\n<html lang="en">\n  <head>\n    <title></title>\n  </head>\n  <body>\n    <div id="root"><!-- element --></div>\n    <script type="module" src="$app/mount.js"></script>\n  </body>\n</html>'
+  // NOTE: The inline script below sets @vitejs/plugin-react's preamble flags
+  // BEFORE the $app/mount.js module script executes. ESM evaluates all imports
+  // before the module body runs, so virtual modules imported by mount.js (e.g.
+  // core.tsx, root.tsx) would otherwise see ___vite_plugin_react_preamble_installed__
+  // as undefined and throw. The inline script runs synchronously during HTML
+  // parsing, before any module scripts load.
+  return '<!doctype html>\n<html lang="en">\n  <head>\n    <title></title>\n  </head>\n  <body>\n    <div id="root"><!-- element --></div>\n<script>window.__vite_plugin_react_preamble_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(t)=>t</script>\n    <script type="module" src="$app/mount.js"></script>\n  </body>\n</html>'
 }
 
 /**
