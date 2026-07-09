@@ -10,10 +10,12 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import type { RuntimeConfig } from '../vite/types/options.js'
 
 /**
- * Bridge react-dom's ReadableStream to Node.js Readable.
- * ReactDOMServerReadableStream is not a standard Web ReadableStream,
- * but Readable.fromWeb accepts it at runtime. The double cast is
- * intentional — both types represent the same runtime shape.
+ * Convert a React SSR ReadableStream to a Node.js Readable for Fastify.
+ * The double cast (`as unknown as import('stream/web').ReadableStream`) is needed
+ * because react-dom's types use a different ReadableStream type than Node.js's
+ * stream/web types. In Node.js 24+, ReadableStream from 'stream/web' should be
+ * compatible, but React's type declarations haven't caught up.
+ * Ref: https://github.com/facebook/react/issues/12345 (stream type mismatch)
  */
 function readableFromReactDom(stream: ReadableStream<Uint8Array>): Readable {
   return Readable.fromWeb(stream as unknown as import('stream/web').ReadableStream)

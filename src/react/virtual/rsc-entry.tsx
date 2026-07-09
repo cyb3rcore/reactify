@@ -18,6 +18,7 @@ import {
 import { createElement, type ComponentType, type ReactNode } from 'react'
 import { matchRoute } from '../router.js'
 import { getContext, setSyncContext } from '../rsc-context.js'
+import { filePathToRoutePath } from '../route-utils.js'
 import type { RscAttachedRequest } from '../rsc-handler.js'
 import routesManifest from '$app/routes.js'
 import ValtioHydrator from '$app/valtio-hydrator.js'
@@ -108,31 +109,6 @@ function parseRenderRequest(request: Request): RenderRequest {
     }
   }
   return { isRsc: false, isAction, url }
-}
-
-/**
- * Convert a file path from the routes manifest to a route path string.
- *
- * Examples:
- *   /pages/index.jsx        -> /
- *   /pages/about.jsx        -> /about
- *   /pages/blog/[slug].jsx  -> /blog/:slug
- *   /pages/[...catchAll].jsx -> /:catchAll*
- */
-function filePathToRoutePath(filePath: string): string | null {
-  let route = filePath.replace(/\.(jsx|tsx|js|ts)$/, '')
-  // Strip pages/ or src/pages/ prefix (with or without leading /)
-  route = route.replace(/^\/?(pages|src\/pages)\/?/, '/')
-  // Handle index routes
-  if (route === '' || route === '/index' || route === 'index') return '/'
-  route = route.replace(/\/index$/, '')
-  // Catch-all [...name] -> :name*
-  route = route.replace(/\[\.\.\.(\w+)\]/g, ':$1*')
-  // Dynamic params [name] -> :name
-  route = route.replace(/\[(\w+)\]/g, ':$1')
-  // Ensure leading /
-  if (!route.startsWith('/')) route = '/' + route
-  return route
 }
 
 /**
