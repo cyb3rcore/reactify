@@ -73,6 +73,13 @@ export function createErrorHandler(
   }
 }
 
+/**
+ * Register a Fastify route with React-specific hooks.
+ *
+ * Handles context creation (RouteContext.create), data loading (getData),
+ * head metadata (getMeta), onEnter lifecycle, RSC handler routing, and
+ * companion _.rsc route registration for client-side action/fetch URLs.
+ */
 export async function createRoute(
   {
     client,
@@ -173,6 +180,7 @@ export async function createRoute(
 
   // Route handler
   let handler: ((req: FastifyRequest, reply: FastifyReply) => unknown) | undefined
+  // ---- Section divider ----
   if (route.rsc) {
     handler = async (req: FastifyRequest, reply: FastifyReply) => {
       const ctx = { req, reply, server: scope }
@@ -195,16 +203,7 @@ export async function createRoute(
       )
       return reply
     }
-  } else if (config.dev) {
-    handler = async (req: FastifyRequest, reply: FastifyReply) => {
-      const ctx = { req, reply, server: scope }
-      setSyncContext(ctx)
-      try {
-        return await reply.html()
-      } finally {
-        setSyncContext(null)
-      }
-    }
+    // ---- Section divider ----
   } else {
     handler = async (req: FastifyRequest, reply: FastifyReply) => {
       const ctx = { req, reply, server: scope }
@@ -234,8 +233,9 @@ export async function createRoute(
     ...route,
   })
 
+  // ---- Section divider ----
   // Register companion route for RSC _.rsc suffix requests.
-  // Client-side code constructs action/fetch URLs as `${pathname}_.rsc`.
+  // Client-side code constructs action/fetch URLs as ${pathname}_.rsc.
   // Without this companion route, Fastify returns 404 for these requests.
   if (route.rsc) {
     ;(scope as unknown as {
