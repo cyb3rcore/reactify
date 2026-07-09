@@ -16,24 +16,45 @@ test.describe('react-base browser', () => {
     await server.close()
   })
 
-  test('client navigation between pages', async ({ page }) => {
+  test('home page loads with correct SSR content and no hydration errors', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (err) => errors.push(err.message))
+
     await page.goto(BASE_URL)
     await expect(page.locator('p')).toContainText('React base e2e')
+    await expect(page.locator('nav a')).toHaveCount(4)
+    expect(errors).toEqual([])
   })
 
-  test('client hydration preserves SSR content', async ({ page }) => {
+  test('client-side navigation via link click', async ({ page }) => {
     await page.goto(BASE_URL)
-    await expect(page.locator('p')).toHaveText('React base e2e')
+    await page.click('a[href="/users/settings"]')
+    await expect(page.locator('p')).toHaveText('Settings page')
   })
 
-  test('hash and search params preserved on navigation', async ({ page }) => {
+  test('initial URL has search and hash params', async ({ page }) => {
     await page.goto(`${BASE_URL}?q=hello#section`)
     expect(page.url()).toContain('q=hello')
     expect(page.url()).toContain('section')
   })
 
-  test('target="_blank" links are not intercepted', async ({ page }) => {
+  test('search params preserved during client navigation', async ({ page }) => {
     await page.goto(BASE_URL)
-    await expect(page.locator('body')).toBeVisible()
+    await page.click('a[href="/users/settings?tab=profile#prefs"]')
+    await expect(page.locator('p')).toHaveText('Settings page')
+    expect(page.url()).toContain('tab=profile')
+  })
+
+  test('target=_blank links bypass SPA interceptor', async ({ page, context }) => {
+    await page.goto(BASE_URL)
+
+    const [newPage] = await Promise.all([
+      context.waitForEvent('page'),
+      page.click('a[target="_blank"]'),
+    ])
+
+    await newPage.waitForLoadState()
+    expect(newPage.url()).toContain('example.com')
+    await newPage.close()
   })
 })

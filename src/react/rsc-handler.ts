@@ -29,11 +29,11 @@ export async function convertRequest(
     const contentType =
       (req.headers as Record<string, string>)?.['content-type'] ?? ''
     if (contentType.startsWith('multipart/form-data')) {
-      // Boundary: Node.js IncomingMessage (req.raw) is a Readable
-      // but its type doesn't overlap with Web ReadableStream.
-      // The runtime value is compatible for Fetch API body usage.
-      init.body = req.raw as unknown as ReadableStream
-      init.duplex = 'half'
+      // Use the buffered body from Fastify's content type parser.
+      // prepareServer registers a multipart/form-data parser that buffers
+      // the raw request body into req.body (as a Buffer). This avoids
+      // Fastify's default rejection of multipart with "Unsupported Media Type".
+      init.body = req.body as unknown as ReadableStream
     } else if (req.body) {
       const body =
         typeof req.body === 'string'

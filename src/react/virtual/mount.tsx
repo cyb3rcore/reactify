@@ -4,6 +4,26 @@ import { RouteProvider, type RouteDef } from './core.js'
 import { RouteRenderer } from './root.js'
 
 /**
+ * Set React Refresh preamble flags at module level.
+ *
+ * @vitejs/plugin-react injects $RefreshSig$() at the top of any function
+ * containing a component definition. hydrateRsc contains RscRoot, so the
+ * plugin adds `var _s = $RefreshSig$()` as the very first statement in
+ * the function body. We must set the preamble before hydrateRsc is called
+ * or the injected call throws "TypeError: $RefreshSig$ is not a function".
+ *
+ * RSC pages use SSR-generated HTML which does not include the React Refresh
+ * preamble script that @vitejs/plugin-react normally injects into HTML via
+ * transformIndexHtml (the response is a ReadableStream, bypassing that hook).
+ * We set it here instead.
+ */
+if (typeof window !== 'undefined') {
+  ;(window as any).$RefreshReg$ = () => {}
+  ;(window as any).$RefreshSig$ = () => (type: any) => type
+  ;(window as any).__vite_plugin_react_preamble_installed__ = true
+}
+
+/**
  * Hydrate an RSC page using the flight data injected by the server.
  * Follows the pattern from @fastify/react's mount.ts (upstream reference).
  */
@@ -52,13 +72,9 @@ async function hydrateRsc(targetElem: Element): Promise<void> {
     }
   }
 
-  // Set React Refresh preamble flags BEFORE createFromReadableStream so
-  // that client modules loaded dynamically by the RSC stream decoder
-  // (via __vite_rsc_require__ -> import()) don't trigger the
-  // react-refresh-wrapper's preamble check.
-  ;(window as any).$RefreshReg$ = () => {}
-  ;(window as any).$RefreshSig$ = () => (type: any) => type
-  ;(window as any).__vite_plugin_react_preamble_installed__ = true
+  // React Refresh preamble is now set at module level above so that
+  // @vitejs/plugin-react's injected $RefreshSig$() call at the top of
+  // this function body resolves successfully.
 
   const initialPayload = await createFromReadableStream(rscStream)
 

@@ -279,7 +279,17 @@ async function handler(request: Request): Promise<Response> {
       const args = await decodeReply(body, { temporaryReferences })
       const action = await loadServerAction(renderRequest.actionId)
       try {
-        const data = await action.apply(null, args)
+        // useActionState in server components: the form action on the
+        // client is a plain server reference (without client-side state
+        // tracking), so callServer receives [formData] instead of
+        // [prevState, formData].  We detect this case and prepend the
+        // previous state stored by the useActionState shim.
+        const prevState = (globalThis as any).__rsc_lastActionState
+        const callArgs =
+          Array.isArray(args) && args.length === 1 && prevState !== undefined
+            ? [prevState, ...args]
+            : args
+        const data = await action.apply(null, callArgs)
         returnValue = { ok: true, data }
       } catch (e: unknown) {
         returnValue = { ok: false, data: e }
@@ -366,6 +376,19 @@ async function handler(request: Request): Promise<Response> {
       Object.assign(valtioState, onEnterData)
     }
 
+    // Set global form state for useActionState shim before rendering the
+    // page component. The plugin's patchUseActionState shim checks
+    // globalThis.__rsc_formState so server-side useActionState returns the
+    // action result rather than the initial state on re-render after an
+    // action. This ensures the RSC payload's element tree reflects the
+    // updated state.
+    if (renderRequest.isAction && returnValue?.ok) {
+      ; (globalThis as Record<string, unknown>).__rsc_formState = returnValue.data
+        ; (globalThis as Record<string, unknown>).__rsc_lastActionState = returnValue.data
+    } else if (formState !== undefined) {
+      ; (globalThis as Record<string, unknown>).__rsc_formState = formState
+    }
+
     // Create a React element from the route module's default export.
     // pageModule is narrowed to PageModule by the isPageModule guard above,
     // so default is already ComponentType<...> | undefined.
@@ -373,6 +396,10 @@ async function handler(request: Request): Promise<Response> {
       ? createElement(pageModule.default)
       : null
 
+    // Do NOT clear __rsc_formState here — the element created above is a
+    // React element (createElement does NOT invoke the component function).
+    // The component runs lazily during renderToReadableStream below, so
+    // the shim's own clearing-on-read is sufficient.
     // Build the RSC payload (analogous to what react-router's RSC router produces)
     const rscPayload: RscPayload = {
       type: 'RSC',

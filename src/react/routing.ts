@@ -110,6 +110,10 @@ export async function createRoute(
 
   const preHandler: Array<(req: FastifyRequest) => Promise<void>> = [
     async (req: FastifyRequest) => {
+      // RSC routes use client.rscHandler.fetch() which manages its own
+      // rendering. Creating a React app with RouteProvider/RouteRenderer
+      // here would conflict with the RSC handler — skip it entirely.
+      if (route.rsc) return
       const reqRoute = (req as unknown as Record<string, unknown>).route as Record<string, unknown>
       if (!reqRoute.clientOnly) {
         const app = (client.create as (...args: unknown[]) => unknown)({
@@ -189,6 +193,7 @@ export async function createRoute(
           sendResponse(reply, response)
         },
       )
+      return reply
     }
   } else if (config.dev) {
     handler = async (req: FastifyRequest, reply: FastifyReply) => {

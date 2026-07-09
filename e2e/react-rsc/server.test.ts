@@ -9,22 +9,38 @@ describe('react-rsc', () => {
 
   it('RSC page has __FLIGHT_DATA in HTML', makeRscIndexTest({ main, dev: true, pageUrl: '/rsc-page' }))
 
-  it('RSC page returns _.rsc Flight payload', async () => {
-    const server = await main(true)
+  it('renders RSC page in production mode', async () => {
+    const server = await main()
     try {
-      const res = await server.inject({ method: 'GET', url: '/rsc-page_.rsc' })
+      const res = await server.inject({ method: 'GET', url: '/rsc-page' })
       expect(res.statusCode).toBe(200)
+      expect(res.body).toContain('<!doctype html>')
+      expect(res.body).toContain('__FLIGHT_DATA')
+      expect(res.body).not.toContain('Error:')
     } finally {
       await server.close()
     }
   })
 
-  it('streaming response is chunked (no Content-Length)', async () => {
+  it('/rsc-page_.rsc endpoint responds with Flight payload', async () => {
+    const server = await main(true)
+    try {
+      const res = await server.inject({ method: 'GET', url: '/rsc-page_.rsc' })
+      expect(res.statusCode).toBe(200)
+      expect(res.headers['content-type']).toContain('text/x-component')
+      expect(res.body).toBeDefined()
+      expect(res.body.length).toBeGreaterThan(0)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('streaming route returns content without Content-Length header', async () => {
     const server = await main(true)
     try {
       const res = await server.inject({ method: 'GET', url: '/streaming' })
       expect(res.statusCode).toBe(200)
-      // Streaming responses should not have Content-Length
+      expect(res.body).toContain('Streaming SSR')
       expect(res.headers['content-length']).toBeUndefined()
     } finally {
       await server.close()
