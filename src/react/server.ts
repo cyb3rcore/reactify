@@ -35,7 +35,7 @@ type RouteRecord = RouteExports & {
   [key: string]: unknown
 }
 
-class Routes extends Array<RouteRecord> {
+export class Routes extends Array<RouteRecord> {
   toJSON(): Array<Record<string, unknown>> {
     return this.map((route) => ({
       id: route.id,
@@ -140,7 +140,7 @@ export async function createRoutes(
   return new Routes(...(await Promise.all(promises)))
 }
 
-function getRouteModuleExports(
+export function getRouteModuleExports(
   routeModule: Record<string, unknown>,
 ): RouteExports {
   return {

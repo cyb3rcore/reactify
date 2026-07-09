@@ -7,7 +7,7 @@
  *   /pages/blog/[slug].jsx  -> /blog/:slug
  *   /pages/[...catchAll].jsx -> /:catchAll*
  */
-export function filePathToRoutePath(filePath: string): string | null {
+export function filePathToRoutePath(filePath: string): string {
   let route = filePath.replace(/\.(jsx|tsx|js|ts)$/, '')
   // Strip pages/ or src/pages/ prefix (with or without leading /)
   route = route.replace(/^\/?(pages|src\/pages)\/?/, '/')
