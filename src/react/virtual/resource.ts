@@ -1,3 +1,12 @@
+/**
+ * Render-as-you-fetch data fetching for React Suspense.
+ *
+ * Throwing a promise during render triggers the nearest Suspense boundary.
+ * Both waitResource and waitFetch follow the cache-then-suspend pattern:
+ * on first call they initiate the fetch and store the promise; on re-entry
+ * (after React catches the thrown promise) they throw the cached promise;
+ * once resolved they return the cached result and clean up.
+ */
 interface LoaderState<T = unknown> {
   suspended: boolean
   error: Error | null
@@ -15,6 +24,14 @@ interface FetchLoaderState {
 const clientFetchMap = new Map<string, FetchLoaderState>()
 const clientResourceMap = new Map<string, LoaderState>()
 
+/**
+ * Cache-then-suspend data fetcher keyed by resourceId (\`${path}:${id}\`).
+ *
+ * - Cache hit & resolved -> delete entry, return result.
+ * - Cache hit & suspended -> throw cached promise (triggers Suspense).
+ * - Cache miss & loader fn provided -> initiate fetch, store promise, re-enter.
+ * - Cache miss & no loader fn -> throw a suspended promise or error.
+ */
 export function waitResource<T>(
   path: string,
   id: string,
@@ -28,8 +45,10 @@ export function waitResource<T>(
       throw loaderStatus.error
     }
     if (loaderStatus.suspended) {
+      // Suspend: re-throw the stored promise to trigger React Suspense
       throw loaderStatus.promise
     }
+    // Cache hit: return result, clean up entry for next call
     resourceMap.delete(resourceId)
     return loaderStatus.result as T
   }
@@ -61,7 +80,7 @@ export function waitResource<T>(
 
   resourceMap.set(resourceId, loader)
 
-  // Re-enter to pick up the suspended state (triggers React Suspense)
+  // Re-enter to throw the suspended promise — triggers React Suspense boundary
   return waitResource<T>(path, id, undefined, resourceMap)
 }
 
@@ -73,15 +92,18 @@ export function waitFetch(
   const loaderStatus = fetchMap.get(path)
   if (loaderStatus) {
     const data = loaderStatus.data
+    // Check for cached error state — throw immediately
     if (loaderStatus.error || data?.statusCode === 500) {
       if (data?.statusCode === 500) {
         throw new Error(data.message as string)
       }
       throw loaderStatus.error
     }
+    // Suspend: re-throw the stored promise to trigger React Suspense
     if (loaderStatus.suspended) {
       throw loaderStatus.promise
     }
+    // Cache hit: return data, clean up entry for next call
     fetchMap.delete(path)
     return loaderStatus.data as Record<string, unknown>
   }

@@ -20,6 +20,13 @@ interface ContextInit {
 
 const routeContextInspect = Symbol.for('nodejs.util.inspect.custom')
 
+/**
+ * RouteContext carries per-request state through the React render pipeline.
+ *
+ * Created by RouteContext.create() in routing.ts, it bridges Fastify
+ * request/response objects with React component data, head management,
+ * and route lifecycle hooks (getData, getMeta, onEnter).
+ */
 export default class RouteContext {
   app: unknown = null
   server: FastifyInstance | null = null
@@ -61,6 +68,7 @@ export default class RouteContext {
     return routeContext
   }
 
+  // ---- Section divider ----
   constructor(
     server: FastifyInstance,
     req: FastifyRequest,
@@ -86,6 +94,7 @@ export default class RouteContext {
     this.serverOnly = !!route.serverOnly
   }
 
+  // ---- Section divider ----
   [routeContextInspect]() {
     return {
       ...this,
@@ -95,6 +104,7 @@ export default class RouteContext {
     }
   }
 
+  /** Serialize context for the client hydration script. */
   toJSON(): Record<string, unknown> {
     return {
       actionData: this.actionData,
@@ -109,6 +119,8 @@ export default class RouteContext {
     }
   }
 
+  // ---- Section divider ----
+  /** Add user-defined methods/properties from the context init module to the prototype. */
   static extend(initial: Record<string, unknown>): void {
     const { default: _, ...extra } = initial
     for (const [prop, value] of Object.entries(extra)) {

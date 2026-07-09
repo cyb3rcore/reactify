@@ -76,6 +76,12 @@ function getSymbolState<T>(scope: FastifyInstance, sym: symbol): T | undefined {
   return (scope as unknown as Record<symbol, T | undefined>)[sym]
 }
 
+/**
+ * Decorate Fastify instances with Vite integration.
+ *
+ * Call \`ready()\` after all plugins are registered to start Vite setup,
+ * decorate reply methods, and register client-derived routes.
+ */
 class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
   scope: FastifyInstance
   createServer?: unknown
@@ -102,17 +108,16 @@ class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
    * decorate reply methods, and register client-derived routes.
    */
   async ready(): Promise<void> {
-    // Process all user-provided options and compute all Vite configuration settings
+    // Merge user options with defaults and resolve the full Vite configuration
     this.runtimeConfig = await configure(this[kOptions])
 
-    // Configure the Fastify server instance — used mostly by renderer packages
+    // Allow renderer packages to hook into the Fastify lifecycle before Vite starts
     if (this.runtimeConfig.prepareServer) {
       await this.runtimeConfig.prepareServer(this.scope, this.runtimeConfig)
     }
 
-    // Determine which setup function to use
+    // Dev mode: boot Vite development server with HMR. Prod mode: load production bundles.
     if (this.runtimeConfig.dev) {
-      // Boots Vite's development server and ensures hot reload
       this[kMode] = (await import('./mode/development.js')) as ModeModule
     } else {
       // Assumes presence of and uses production bundled distribution
@@ -122,7 +127,7 @@ class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
     // Get client module based on the Vite server bundle
     const client = await this[kMode].setup(this)
 
-    // Register individual Fastify routes for each the client-provided routes
+    // Register Fastify routes from the client-provided route manifest
     if (hasIterableRoutes(client)) {
       for (const route of client.routes) {
         if (this.runtimeConfig.dev) {
