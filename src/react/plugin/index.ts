@@ -1,6 +1,7 @@
 import type { Plugin, ResolvedConfig } from 'vite'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
 import viteFastify from '../../vite/plugin.js'
 import rsc from '@vitejs/plugin-rsc'
 import {
@@ -24,6 +25,10 @@ try {
 } catch {
   // Not available — will be handled by fallback resolution
 }
+
+// Resolve #runtime alias path used by virtual modules (e.g. #runtime/route-utils.js)
+// Same as in the config hook's runtimeAlias definition.
+const runtimeAliasPath = resolve(import.meta.dirname, '..')
 
 interface PluginContext {
   root: string | null
@@ -64,6 +69,10 @@ export default function viteReactifyPlugin(
             // Fall through to the standard resolveId
           }
         }
+        // Resolve #runtime/* imports from virtual modules
+        if (id.startsWith('#runtime/')) {
+          return { id: id.replace('#runtime', runtimeAliasPath) }
+        }
         // Don't strip \0 prefix here — let virtual module IDs pass through
         // to the load hook where the \0 prefix is stripped. Resolving them
         // here would cause Rolldown to attempt file-system lookup.
@@ -79,10 +88,64 @@ export default function viteReactifyPlugin(
   ]
 }
 
+/**
+ * Inline shim for useActionState — replaces the React hook import in the RSC
+ * environment where the react-server condition does not export this API.
+ *
+ * The react.react-server.js entry (used by the RSC build) omits useActionState.
+ * Rather than fighting module resolution, we replace the import with an inline
+ * function that returns [initialState, action]. This works because:
+ * - On the server, useActionState just needs to provide the initial state and
+ *   action reference; React SSR handles the progressive enhancement.
+ * - The client-side hydration RscRoot / RscContent components use the real
+ *   useActionState from the full react entry.
+ */
+const USE_ACTION_STATE_RE = /import\s*\{[^}]*useActionState[^}]*\}\s*from\s*['"]react['"]/
+
+function patchUseActionState(source: string): string | null {
+  if (!USE_ACTION_STATE_RE.test(source)) return null
+  const patched = source.replace(
+    /import\s+\{([^}]*)\}\s+from\s+['"]react['"]/g,
+    (_match: string, exports: string) => {
+      if (!exports.includes('useActionState')) return _match
+      const items = exports.split(',').map((s: string) => s.trim())
+      const rest = items.filter((s: string) => s !== 'useActionState')
+      const lines: string[] = []
+      if (rest.length > 0) lines.push(`import { ${rest.join(', ')} } from 'react'`)
+      // Inline shim: returns [initialState, action] for server-side rendering.
+      // The react-server-dom-webpack-server rejects useActionState, so we
+      // bypass the dispatcher entirely and provide a simple implementation.
+      lines.push(
+        `const useActionState = (action, initialState, permalink) => [initialState, action]`,
+      )
+      return lines.join('\n')
+    },
+  )
+  return patched !== source ? patched : null
+}
+
 async function load(
   this: PluginContext,
   id: string,
 ): Promise<string | { code: string; map: null } | undefined> {
+  // Patch user modules that import useActionState from react.
+  // Target plain source files (not virtual, not node_modules).
+  // This allows useActionState to work in RSC server components where the
+  // react-server entry omits this hook.
+  if (
+    !id.startsWith('\0') &&
+    !id.includes('node_modules') &&
+    (id.endsWith('.tsx') || id.endsWith('.jsx') || id.endsWith('.ts') || id.endsWith('.js'))
+  ) {
+    try {
+      const source = readFileSync(id, 'utf8')
+      const patched = patchUseActionState(source)
+      if (patched) return { code: patched, map: null }
+    } catch {
+      // File not readable — fall through to default handling
+    }
+  }
+
   if (id.includes('?server') && !this.environment.config.build?.ssr) {
     const source = loadSource(id)
     return createPlaceholderExports(source)
@@ -124,16 +187,23 @@ function config(
   }
   const environments = rawConfig.environments as Record<string, unknown>
 
+  const outDir = ((rawConfig.build as Record<string, unknown>)?.outDir as string) ?? 'dist'
+
+  // Set up #runtime alias for shared utilities (e.g. route-utils.js)
+  const runtimeAlias = { find: '#runtime', replacement: runtimeAliasPath }
+
   // Resolve @vitejs/plugin-rsc aliases so Rolldown can find bare specifiers
   // from virtual modules (which have no physical file path for resolution base).
   const rscPkgAlias = rscPkgResolved
     ? { find: '@vitejs/plugin-rsc', replacement: rscPkgResolved + '/dist' }
     : null
-  const resolveAliases = [rscPkgAlias].filter(Boolean)
+  const resolveAliases = [runtimeAlias, rscPkgAlias].filter(Boolean)
 
   // The RSC environment is needed in both dev and build modes.
+  // Deep-merge with existing rsc config to preserve settings from @vitejs/plugin-rsc
+  // (e.g. resolve.noExternal, emitAssets, optimizeDeps).
+  const entryExt = this?.ts ? 'tsx' : 'jsx'
   const existingRsc = (environments.rsc ?? {}) as Record<string, unknown>
-  const outDir = ((rawConfig.build as Record<string, unknown>)?.outDir as string) ?? 'dist'
 
   environments.rsc = {
     ...existingRsc,
@@ -145,23 +215,13 @@ function config(
       rollupOptions: {
         ...(((existingRsc.build as Record<string, unknown>)?.rollupOptions ?? {}) as Record<string, unknown>),
         input: {
-          'rsc-entry': '$app/rsc-entry.js',
+          'rsc-entry': `$app/rsc-entry.${entryExt}`,
         },
       },
     },
     resolve: {
       ...((existingRsc.resolve ?? {}) as Record<string, unknown>),
       alias: resolveAliases,
-    },
-    optimizeDeps: {
-      ...((existingRsc.optimizeDeps ?? {}) as Record<string, unknown>),
-      exclude: [
-        ...((existingRsc.optimizeDeps as Record<string, unknown> | undefined)?.exclude as string[] ?? []),
-        '$app/*',
-        '@vitejs/plugin-rsc/rsc',
-        '@vitejs/plugin-rsc/ssr',
-        '@vitejs/plugin-rsc/browser',
-      ],
     },
     esbuild: {
       ...((existingRsc.esbuild ?? {}) as Record<string, unknown>),
@@ -170,11 +230,20 @@ function config(
     },
   }
 
+  // Also ensure @vitejs/plugin-rsc is resolvable in the SSR build
+  const ssrEnv = environments.ssr as Record<string, unknown> | undefined
+  if (ssrEnv) {
+    const ssrResolve = (ssrEnv.resolve ?? {}) as Record<string, unknown>
+    const ssrAliases = (ssrResolve.alias ?? []) as Array<Record<string, unknown>>
+    if (rscPkgResolved && !ssrAliases.some((a) => a.find === '@vitejs/plugin-rsc')) {
+      ssrResolve.alias = [...ssrAliases, rscPkgAlias]
+    }
+  }
+
   // Prevent duplicate React copies. @vitejs/plugin-rsc forces react and
   // react-dom into the SSR environment's noExternal (build) and
   // optimizeDeps.include (dev). Bundling React into the SSR bundle creates
   // a second copy whose hooks dispatcher is null — causing "Invalid hook call".
-  const ssrEnv = environments.ssr as Record<string, unknown> | undefined
   if (ssrEnv) {
     // Build: externalize React so the SSR bundle imports from host
     const ssrResolve = (ssrEnv.resolve ?? {}) as Record<string, unknown>
@@ -201,9 +270,11 @@ function config(
   }
 
   // Also clean up the RSC environment's optimizeDeps.include — same reason
-  const rscOptimizeDeps = (environments.rsc as Record<string, unknown>)?.optimizeDeps as Record<string, unknown> | undefined
-  if (rscOptimizeDeps?.include && Array.isArray(rscOptimizeDeps.include)) {
-    rscOptimizeDeps.include = (rscOptimizeDeps.include as string[]).filter(
+  const rscEnvironment = environments.rsc as Record<string, unknown>
+  const rscOptimizeDeps = (rscEnvironment?.optimizeDeps ?? {}) as Record<string, unknown>
+  const rscDepsInclude = rscOptimizeDeps.include
+  if (rscDepsInclude && Array.isArray(rscDepsInclude)) {
+    rscOptimizeDeps.include = (rscDepsInclude as string[]).filter(
       (pkg: string) =>
         pkg !== 'react' &&
         pkg !== 'react-dom' &&
