@@ -8,9 +8,11 @@ describe('virtual module resolution', () => {
   it('resolveId anchors built-in $app modules at the Vite root', async () => {
     const resolved = await resolveId.call({ root: import.meta.dirname }, '$app/layouts.ts')
 
-    expect(resolved).toBe('/$app/layouts.ts')
+    expect(resolved).toBe('\0$app/layouts.ts')
 
-    const [, virtual] = resolved!.split(prefix)
+    // Strip \0 prefix before splitting by the $app/ prefix pattern
+    const cleanResolved = resolved!.charCodeAt(0) === 0 ? resolved!.slice(1) : resolved!
+    const [, virtual] = cleanResolved.split(prefix)
     expect(virtual).toBe('layouts.ts')
     expect(loadVirtualModule(virtual)!.code).toContain("import.meta.glob('/layouts/*.{jsx,tsx}')")
   })
