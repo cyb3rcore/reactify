@@ -2,10 +2,10 @@ pre-commit:
   jobs:
     - name: oxlint
       glob: '*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}'
-      run: npx oxlint --fix {staged_files}
+      run: pnpm exec oxlint --fix {staged_files}
       stage_fixed: true
 
     - name: oxfmt
-      glob: '*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,vue,json,md,mdx,yml,yaml,html,css,scss,less}'
-      run: sh -c 'npx oxfmt --write "$@"; status=$?; [ "$status" -eq 0 ] || [ "$status" -eq 2 ]' -- {staged_files}
+      glob: '*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,md,mdx,yml,yaml,html,css,scss,less}'
+      run: sh -c 'pnpm exec oxfmt --write "$@"; status=$?; [ "$status" -eq 0 ] || [ "$status" -eq 2 ]' -- {staged_files}
       stage_fixed: true
