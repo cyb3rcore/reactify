@@ -1,4 +1,4 @@
-import { createRoutes } from 'reactify/server'
+import { createRoutes } from '../server.js'
 
 export default {
   routes: createRoutes(import('$app/routes.js')),
