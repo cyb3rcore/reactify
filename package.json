@@ -32,6 +32,9 @@
       "import": "./dist/react/index.js"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
