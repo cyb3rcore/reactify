@@ -2,6 +2,8 @@ import { StrictMode, createElement, useState, useEffect, startTransition } from 
 import { hydrateRoot } from 'react-dom/client'
 import { RouteProvider, type RouteDef } from './core.js'
 import { RouteRenderer } from './root.js'
+import { hydrateRoutes } from '../client.js'
+import routesGlob from '$app/routes.js'
 
 declare global {
   interface Window {
@@ -169,5 +171,24 @@ export function mount(routes: RouteDef[], rootId = 'root') {
     </StrictMode>,
   )
 }
+
+// Self-invoke as the module-level entry point for $app/mount.js.
+// The HTML loads this file via <script type="module" src="$app/mount.js">,
+// and ESM top-level execution bootstraps the app. Projects that provide
+// their own mount.tsx override this virtual module entirely.
+async function bootstrap() {
+  if (typeof window === 'undefined') return
+  if (window.__FLIGHT_DATA) {
+    // RSC path: routes not needed — mount() detects __FLIGHT_DATA and
+    // calls hydrateRsc() which reads the flight stream for the element tree
+    // and registers setServerCallback for server action calls.
+    mount([], 'root')
+    return
+  }
+  // Non-RSC path: resolve routes from the glob manifest + SSR metadata
+  const resolvedRoutes = await hydrateRoutes(routesGlob)
+  mount(resolvedRoutes, 'root')
+}
+bootstrap()
 
 

@@ -60,7 +60,7 @@ function loadHtmlTemplate(): string {
   // core.tsx, root.tsx) would otherwise see ___vite_plugin_react_preamble_installed__
   // as undefined and throw. The inline script runs synchronously during HTML
   // parsing, before any module scripts load.
-  return '<!doctype html>\n<html lang="en">\n  <head>\n    <title></title>\n  </head>\n  <body>\n    <div id="root"><!-- element --></div>\n<script>window.__vite_plugin_react_preamble_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(t)=>t</script>\n    <script type="module" src="$app/mount.js"></script>\n  </body>\n</html>'
+  return '<!doctype html>\n<html lang="en">\n  <head>\n    <title></title>\n  </head>\n  <body>\n    <div id="root"><!-- element --></div>\n<script>window.__vite_plugin_react_preamble_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(t)=>t</script>\n    <script type="module" src="/$app/mount.js"></script>\n  </body>\n</html>'
 }
 
 /**
