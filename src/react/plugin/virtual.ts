@@ -38,7 +38,7 @@ function buildVirtualModuleList(): string[] {
     try {
       const onDisk = readdirSync(virtualRoot, { withFileTypes: true })
       for (const entry of onDisk) {
-        if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.test.tsx')) continue
+        if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.test.tsx') || entry.name.endsWith('.d.ts')) continue
         if (entry.isFile() && (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx'))) {
           if (!known.includes(entry.name) && !known.includes(entry.name.replace(/\.(ts|tsx)$/, '') + '/')) {
             console.warn(
