@@ -14,7 +14,9 @@ export function RouteRenderer({ notFound: NotFound }: RouteRendererProps) {
   }
 
   const Component = match.component
-  const Layout = match.layout ?? DefaultLayout
+  // layout may be false (boolean from serialized window.routes metadata)
+  // or undefined (route has no layout export). Handle both with DefaultLayout.
+  const Layout = typeof match.layout === 'function' ? match.layout : DefaultLayout
 
   if (!Component) return null
 

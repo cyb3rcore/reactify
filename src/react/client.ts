@@ -54,8 +54,13 @@ export async function hydrateRoutes(
     const loader = memoImport<{ default: ComponentType<unknown> }>(
       loaders[key] as () => Promise<{ default: ComponentType<unknown> }>,
     )
+    // Don't spread layout from serialized metadata — Routes.toJSON() turns
+    // layout into a boolean (!!layout), which when spread would override the
+    // real layout component with false (causing "Element type is invalid" in
+    // RouteRenderer). Keep getData/getMeta/onEnter booleans for navigation.
+    const { layout: _l, ...clean } = entry
     return {
-      ...entry,
+      ...clean,
       loader,
       component: lazy(() => loader()),
     } as unknown as RouteDef

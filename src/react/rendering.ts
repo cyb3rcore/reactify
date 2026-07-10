@@ -204,5 +204,13 @@ async function* createShellStream(
       yield transformHead(chunk.toString())
     }
   }
+
+  // Inject hydration data (window.route, window.routes) before the closing scripts
+  // This is required even if the HTML template doesn't have {{hydration}} — without it,
+  // client-side SPA navigation fails because hydrateRoutes() has no route metadata.
+  if (context.hydration) {
+    yield context.hydration as string
+  }
+
   yield transformHead(templates.afterElement(context))
 }
