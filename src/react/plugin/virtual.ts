@@ -58,6 +58,18 @@ function buildVirtualModuleList(): string[] {
 
 export const prefix = /^\/?\$app\//
 
+/**
+ * Normalize JSX/TSX file extensions to .js in virtual module IDs.
+ * This prevents duplicate module instances when the same source file
+ * is imported with different extensions (e.g. ./core.js vs $app/core.jsx),
+ * which would cause separate React context instances and broken lookups.
+ * The original file content is still found by loadVirtualModule which
+ * probes disk extensions on every load.
+ */
+function normalizeVirtualModuleId(name: string): string {
+  return name.replace(/\.(jsx|tsx)$/, '.js')
+}
+
 export async function resolveId(
   this: { root: string | null },
   id: string,
@@ -67,14 +79,15 @@ export async function resolveId(
   if (process.platform === 'win32' && /^\.\.\/[C-Z]:/.test(id)) {
     return id.substring(3)
   }
-
   // Resolve relative imports from virtual module contexts (e.g. $app/create.js
   // importing ./core). The relative import is resolved against the importer's
   // virtual directory and checked against known virtual modules or physical files.
   if (importer && (importer.startsWith('/$app/') || importer.startsWith('\0$app/')) && (id.startsWith('./') || id.startsWith('../'))) {
     // Strip \0 null byte prefix before using importer in URL construction
     const cleanImporter = importer.charCodeAt(0) === 0 ? importer.slice(1) : importer
-    const importerDir = cleanImporter.substring(0, cleanImporter.lastIndexOf('/'))
+    // Ensure leading / so the URL is constructed as http://localhost/$app/… not http://localhost$app/…
+    // Without it, localhost$app is treated as the hostname and ./core.js resolves to /core.js (missing /$app/ prefix)
+    const importerDir = '/' + cleanImporter.substring(0, cleanImporter.lastIndexOf('/'))
     const resolvedPath = new URL(id, `http://localhost${importerDir}/`).pathname
     // Check if resolved path matches a virtual module
     if (resolvedPath.startsWith('/$app/')) {
@@ -82,7 +95,7 @@ export async function resolveId(
       if (virtual && virtualModules.includes(virtual)) {
         const override = loadVirtualModuleOverride(this.root ?? '', virtual)
         if (override) return override
-        return `\0$app/${virtual}`
+        return `\0$app/${normalizeVirtualModuleId(virtual)}`
       }
     }
     // If not a virtual module, resolve as physical file relative to the virtual root.
@@ -106,7 +119,7 @@ export async function resolveId(
       if (override) {
         return override
       }
-      return `\0$app/${virtual}`
+      return `\0$app/${normalizeVirtualModuleId(virtual)}`
     }
   }
 }
