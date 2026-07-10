@@ -2,6 +2,7 @@ import type { Plugin, ResolvedConfig } from 'vite'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
+import { transformWithOxc } from 'vite'
 import viteFastify from '../../vite/plugin.js'
 import rsc from '@vitejs/plugin-rsc'
 import {
@@ -79,6 +80,20 @@ export default function viteReactifyPlugin(
         return resolveId.call(context, id, importer)
       },
       load: load.bind(context),
+      transform: {
+        order: 'pre' as const,
+        handler(code: string, id: string) {
+          // Transform JSX in virtual modules before rsc:scan-strip runs,
+          // since es-module-lexer (used by rsc:scan-strip) can't parse JSX.
+          // The normalized module ID uses .js extension (from normalizeVirtualModuleId),
+          // so we check includes('\0$app/') directly rather than file extension.
+          if (id.includes('\0$app/') && (id.endsWith('.jsx') || id.endsWith('.tsx') || id.endsWith('.js'))) {
+            return transformWithOxc(code, id, {
+              jsx: { runtime: 'automatic', importSource: 'react' },
+            })
+          }
+        },
+      },
       transformIndexHtml: {
         order: 'post' as const,
         handler: transformIndexHtml.bind(context),
