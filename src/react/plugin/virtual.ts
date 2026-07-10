@@ -71,8 +71,10 @@ export async function resolveId(
   // Resolve relative imports from virtual module contexts (e.g. $app/create.js
   // importing ./core). The relative import is resolved against the importer's
   // virtual directory and checked against known virtual modules or physical files.
-  if (importer && importer.startsWith('/$app/') && (id.startsWith('./') || id.startsWith('../'))) {
-    const importerDir = importer.substring(0, importer.lastIndexOf('/'))
+  if (importer && (importer.startsWith('/$app/') || importer.startsWith('\0$app/')) && (id.startsWith('./') || id.startsWith('../'))) {
+    // Strip \0 null byte prefix before using importer in URL construction
+    const cleanImporter = importer.charCodeAt(0) === 0 ? importer.slice(1) : importer
+    const importerDir = cleanImporter.substring(0, cleanImporter.lastIndexOf('/'))
     const resolvedPath = new URL(id, `http://localhost${importerDir}/`).pathname
     // Check if resolved path matches a virtual module
     if (resolvedPath.startsWith('/$app/')) {
@@ -80,7 +82,7 @@ export async function resolveId(
       if (virtual && virtualModules.includes(virtual)) {
         const override = loadVirtualModuleOverride(this.root ?? '', virtual)
         if (override) return override
-        return `/$app/${virtual}`
+        return `\0$app/${virtual}`
       }
     }
     // If not a virtual module, resolve as physical file relative to the virtual root.
@@ -104,7 +106,7 @@ export async function resolveId(
       if (override) {
         return override
       }
-      return `/$app/${virtual}`
+      return `\0$app/${virtual}`
     }
   }
 }
