@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, use, startTransition, Component, type ReactNode } from 'react'
+import { useState, useEffect, use, startTransition, useRef, Component, type ReactNode } from 'react'
 import { useRouteContext } from './core.js'
 import { consumePrefetch } from './prefetch-cache.js'
 import {
@@ -92,12 +92,18 @@ export default function RscSlot({ initialRscPromise }: { initialRscPromise?: Pro
     return () => { delete globalThis.__rscSetPayloadPromise }
   }, [])
 
+  const isFirstMount = useRef(true)
+
   // Navigation: check prefetch cache, fall back to fetch
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false
+      return
+    }
     const cached = consumePrefetch(location.pathname)
     const promise = cached ?? createFromFetch(fetch(rscUrl))
     setPayloadPromise(promise)
-  }, [location.pathname])
+  }, [location.pathname, location.search])
 
   // Suspense — React preserves SSR HTML while promise is pending
   const payload = use(payloadPromise)
