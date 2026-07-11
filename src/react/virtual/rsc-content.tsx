@@ -1,15 +1,14 @@
 'use client'
 
-import {
-  useState,
-  useEffect,
-  Component,
-  startTransition,
-  useRef,
-  useCallback,
-  type ReactNode,
-} from 'react'
+import { useState, useEffect, use, startTransition, Component, type ReactNode } from 'react'
 import { useRouteContext } from './core.js'
+import { consumePrefetch } from './prefetch-cache.js'
+import {
+  createFromFetch,
+  createTemporaryReferenceSet,
+  encodeReply,
+  setServerCallback,
+} from '@vitejs/plugin-rsc/browser'
 
 interface RscPayload {
   matches?: Array<{ element?: ReactNode }>
@@ -17,12 +16,39 @@ interface RscPayload {
   head?: { title?: string }
   formState?: unknown
 }
-import {
-  createFromFetch,
-  setServerCallback,
-  createTemporaryReferenceSet,
-  encodeReply,
-} from '@vitejs/plugin-rsc/browser'
+
+export type { RscPayload }
+
+declare global {
+  var __rscSetPayloadPromise: ((p: Promise<RscPayload>) => void) | undefined
+}
+
+// Module-level server action callback registration
+// Registers before any component mounts — avoids the useEffect race window.
+// The callback receives the action ID and args, POSTs to the _.rsc endpoint,
+// and updates the RscSlot component via the module-level setter ref.
+if (typeof window !== 'undefined') {
+  const serverCallback = async (id: string, args: unknown[]) => {
+    const temporaryReferences = createTemporaryReferenceSet()
+    const rscUrl = `${window.location.pathname}_.rsc${window.location.search}`
+    const payload = await createFromFetch<RscPayload>(
+      fetch(rscUrl, {
+        method: 'POST',
+        headers: { 'x-rsc-action': id },
+        body: await encodeReply(args, { temporaryReferences }),
+      }),
+      { temporaryReferences },
+    )
+    const setter = globalThis.__rscSetPayloadPromise as ((p: Promise<RscPayload>) => void) | undefined
+    if (setter) {
+      startTransition(() => setter(Promise.resolve(payload)))
+    }
+    const { ok, data } = payload.returnValue ?? {}
+    if (!ok) throw data
+    return data
+  }
+  setServerCallback(serverCallback)
+}
 
 class RscErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -51,92 +77,40 @@ class RscErrorBoundary extends Component<{ children: ReactNode }, { error: Error
   }
 }
 
-declare global {
-  interface Window {
-    __FLIGHT_DATA?: unknown[]
-  }
-}
-
-/**
- * RSC Content component — renders server components on the client.
- *
- * Uses `useRouteContext().location` (from our custom router) instead of
- * react-router's `useLocation()`. Fetches RSC payloads on navigation
- * and re-renders the React element tree produced by the server.
- */
-export default function RscContent() {
+export default function RscSlot({ initialRscPromise }: { initialRscPromise?: Promise<RscPayload> }) {
   const { location } = useRouteContext()
-  const [element, setElement] = useState<ReactNode>(null)
-  const [loading, setLoading] = useState(false)
+  const rscUrl = `${location.pathname}_.rsc${location.search}`
 
-  // Register server action callback once on mount.
+  // Start with initial SSR promise, or fetch direct if no SSR data
+  const [payloadPromise, setPayloadPromise] = useState<Promise<RscPayload>>(
+    () => initialRscPromise ?? createFromFetch(fetch(rscUrl)),
+  )
+
+  // Expose setter for module-level server action callback
   useEffect(() => {
-    setServerCallback(async (id: string, args: unknown[]) => {
-      const temporaryReferences = createTemporaryReferenceSet()
-      const rscUrl = `${window.location.pathname}_.rsc${window.location.search}`
-      const payload = await createFromFetch<RscPayload>(
-        fetch(rscUrl, {
-          method: 'POST',
-          headers: { 'x-rsc-action': id },
-          body: await encodeReply(args, { temporaryReferences }),
-        }),
-        { temporaryReferences },
-      )
-      startTransition(() => {
-        setElement(payload.matches?.[0]?.element ?? null)
-        setLoading(false)
-      })
-      const { ok, data } = payload.returnValue ?? {}
-      if (!ok) throw data
-      return data
-    })
+    globalThis.__rscSetPayloadPromise = setPayloadPromise
+    return () => { delete globalThis.__rscSetPayloadPromise }
   }, [])
 
-  // Fetch RSC content on client navigation (initial hydration handled by mount.js)
+  // Navigation: check prefetch cache, fall back to fetch
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
+    const cached = consumePrefetch(location.pathname)
+    const promise = cached ?? createFromFetch(fetch(rscUrl))
+    setPayloadPromise(promise)
+  }, [location.pathname])
 
-    const rscUrl = `${location.pathname}_.rsc${location.search}`
-    createFromFetch<RscPayload>(fetch(rscUrl)).then((payload) => {
-      if (!cancelled) {
-        startTransition(() => {
-          setElement(payload.matches?.[0]?.element ?? null)
-          setLoading(false)
-        })
-        if (payload?.head?.title) {
-          document.title = payload.head.title
-        }
-      }
-    })
+  // Suspense — React preserves SSR HTML while promise is pending
+  const payload = use(payloadPromise)
 
-    return () => {
-      cancelled = true
+  // Update document title from payload
+  useEffect(() => {
+    if (payload?.head?.title) {
+      document.title = payload.head.title
     }
-  }, [location.pathname, location.search])
+  }, [payload])
 
-  // Only show loading on initial render, not on client navigation
-  if (loading && !element) {
-    return <div className="rsc-loading">Loading...</div>
-  }
-
-  return <RscErrorBoundary>{element}</RscErrorBoundary>
+  return <RscErrorBoundary>{payload.matches?.[0]?.element ?? null}</RscErrorBoundary>
 }
 
-/**
- * Hook to call a server action by path. Kept as a named export to satisfy
- * the re-export from `./core.tsx`.
- */
-export function useServerAction(
-  path: string,
-  options?: Record<string, unknown>,
-): () => Promise<unknown> {
-  const ref = useRef<AbortController | null>(null)
-  return useCallback(async () => {
-    if (ref.current) ref.current.abort()
-    ref.current = new AbortController()
-    const res = await fetch(path, { ...options, signal: ref.current.signal })
-    if (!res.ok) throw new Error(`Server action failed: ${res.status}`)
-    return res.json()
-  }, [path, options])
-}
+// Re-export for use from other modules
+export { setServerCallback }
