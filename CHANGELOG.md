@@ -1,5 +1,17 @@
 # @cyb3rcore/reactify
 
+## 1.0.6
+
+### Patch Changes
+
+- fix: replace Youch with safe inline error pages, hide stack traces in production
+
+  - routing.ts: Removed static Youch import, replaced with inline error page
+    (dev shows stack, production returns empty body — was already doing this)
+  - rsc-entry.tsx: Error page now only shows stack trace in dev mode.
+    In production, a generic "500 — Internal Server Error" page is shown
+    to prevent leaking file paths and server internals.
+
 ## 1.0.5
 
 ### Patch Changes
