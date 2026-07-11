@@ -1,5 +1,15 @@
 # @cyb3rcore/reactify
 
+## 0.1.3
+
+### Patch Changes
+
+- fix: resolve \0-prefixed virtual module IDs during SSR build and eliminate hydration async gap
+
+  - `resolveId` now strips the `\0` prefix before the `$app/` regex check, fixing production builds where the RSC plugin emits `\0$app/ssr-entry.js` chunks via `this.emitFile()`.
+  - `hydrateRoutes` is no longer `async` (it was internally synchronous), removing the Promise wrapper that created an async gap before hydration — clicks during that gap caused full page reloads.
+  - `bootstrap()` is now synchronous, so the click handler registers before the browser paints.
+
 ## 0.1.2
 
 ### Patch Changes
