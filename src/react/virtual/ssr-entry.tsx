@@ -28,6 +28,7 @@ function loadHtmlTemplate(): string {
   const isDev = import.meta.env.DEV
   const candidates = isDev
     ? [
+        join(process.cwd(), 'src', 'client', 'index.html'),
         join(process.cwd(), 'client', 'index.html'),
         'client/index.html',
         join(process.cwd(), 'client', 'dist', 'client', 'index.html'),
@@ -35,6 +36,7 @@ function loadHtmlTemplate(): string {
         'index.html',
       ]
     : [
+        join(process.cwd(), 'src', 'client', 'index.html'),
         join(process.cwd(), 'client', 'dist', 'client', 'index.html'),
         join(process.cwd(), 'client', 'index.html'),
         'client/index.html',
