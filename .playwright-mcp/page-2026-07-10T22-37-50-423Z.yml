@@ -1,6 +1,0 @@
-- generic [ref=f5e3]:
-  - heading "reactify.sh" [level=1] [ref=f5e4]
-  - paragraph [ref=f5e5]: Built with Reactify — Fastify + React + Vite
-  - navigation [ref=f5e6]:
-    - link "View demos" [ref=f5e7] [cursor=pointer]:
-      - /url: /demo
