@@ -11,6 +11,7 @@ import {
   useParams,
   useRouteData,
   useRouteHead,
+  type RouteDef,
 } from './core.js'
 
 // Set up mock route table with static and parameterized paths
@@ -300,6 +301,53 @@ describe('navigate', () => {
     })
     expect(goSpy).toHaveBeenCalledWith(-1)
     goSpy.mockRestore()
+  })
+
+  // When navigating to an RSC route, expect SPA navigation (not full page reload)
+  it('navigate to RSC route uses SPA navigation', () => {
+    const rscRoutes = [
+      ...testRoutes,
+      { path: '/rsc-page', rsc: true },
+    ]
+    function TestComponent() {
+      const { location, navigate } = useRouteContext()
+      return React.createElement(
+        'div', null,
+        React.createElement('span', { 'data-testid': 'path' }, location.pathname),
+        React.createElement('button', { onClick: () => navigate('/rsc-page') }, 'Go RSC'),
+      )
+    }
+    render(
+      <RouteProvider routes={rscRoutes as RouteDef[]} location="/">
+        <TestComponent />
+      </RouteProvider>,
+    )
+    act(() => { screen.getByText('Go RSC').click() })
+    expect(screen.getByTestId('path').textContent).toBe('/rsc-page')
+  })
+
+  // When popstate fires for an RSC route, expect SPA navigation (not full page reload)
+  it('popstate for RSC route uses SPA navigation', () => {
+    const rscRoutes = [
+      ...testRoutes,
+      { path: '/rsc-page', rsc: true },
+    ]
+    function TestComponent() {
+      const { location } = useRouteContext()
+      return React.createElement('div', null, location.pathname)
+    }
+    render(
+      <RouteProvider routes={rscRoutes as RouteDef[]} location="/rsc-page">
+        <TestComponent />
+      </RouteProvider>,
+    )
+    // Simulate popstate back to /
+    act(() => {
+      window.history.pushState(null, '', '/')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+    // Should have navigated via SPA to /
+    expect(screen.getByText('/')).toBeDefined()
   })
 })
 
