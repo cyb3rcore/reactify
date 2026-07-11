@@ -1,5 +1,16 @@
 # @cyb3rcore/reactify
 
+## 1.0.4
+
+### Patch Changes
+
+- feat: export Link component from package entry
+
+  The `<Link>` component with hover prefetch is now importable from the main
+  package entry: `import { Link } from '@cyb3rcore/reactify'`. It prefetches
+  RSC flight data on hover (via the prefetch cache) and navigates via SPA
+  on click.
+
 ## 1.0.3
 
 ### Patch Changes
