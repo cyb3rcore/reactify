@@ -1,6 +1,6 @@
 {
   "name": "@cyb3rcore/reactify",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "description": "React SSR + RSC for Fastify — React Server Components and SSR on Fastify + Vite, with file-system routing, server actions, streaming, and Valtio integration",
   "license": "MIT",
   "files": [
