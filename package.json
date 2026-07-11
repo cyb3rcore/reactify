@@ -1,6 +1,6 @@
 {
   "name": "@cyb3rcore/reactify",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "description": "Fork of fastify-vite with React support",
   "type": "module",
