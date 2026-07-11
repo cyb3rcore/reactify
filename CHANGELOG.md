@@ -1,5 +1,17 @@
 # @cyb3rcore/reactify
 
+## 1.0.1
+
+### Patch Changes
+
+- fix: inject window.routes in RSC SSR HTML so client can build route table
+
+  When ssr-entry.tsx renders the RouteProvider shell for RSC pages, it must
+  also inject the window.routes inline script. Without it, hydrateRoutes()
+  returns an empty array, matchRoute returns null for every URL, and the
+  data-loading effect crashes on null.route.getData — causing blank pages
+  until manual refresh.
+
 ## 1.0.0
 
 ### Major Changes

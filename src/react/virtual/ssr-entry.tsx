@@ -15,6 +15,7 @@ import { createHead, transformHtmlTemplate } from '@unhead/react/server'
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createElement } from 'react'
+import * as devalue from 'devalue'
 import { RouteProvider, type RouteDef } from './core.js'
 import { RouteRenderer } from './root.js'
 import type { RscPayload } from './rsc-content.js'
@@ -177,7 +178,11 @@ export async function generateHTML(request: Request, serverResponse: Response, r
         controller.enqueue(encoder.encode(cleaned))
       },
       flush(controller) {
-        controller.enqueue(encoder.encode(rscPayloadScripts + (templateAfter ?? '')))
+        // Inject window.routes so the client can build the route table via
+        // hydrateRoutes(routesGlob). Without this, matchRoute returns null
+        // for every URL and the data-loading effect crashes on null.route.
+        const routesScript = `<script>window.routes = ${devalue.uneval(routes)}</script>\n`
+        controller.enqueue(encoder.encode(rscPayloadScripts + routesScript + (templateAfter ?? '')))
       },
     }),
   )
