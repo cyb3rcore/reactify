@@ -1,6 +1,7 @@
 import { Readable } from 'node:stream'
-import { createElement, type ReactNode } from 'react'
-import { renderToReadableStream } from 'react-dom/server'
+import { createRequire } from 'node:module'
+import { join } from 'node:path'
+import type { ReactNode } from 'react'
 import * as devalue from 'devalue'
 import { transformHtmlTemplate } from '@unhead/react/server'
 import { createHtmlTemplates } from './templating.js'
@@ -8,6 +9,37 @@ import { RouteProvider, type RouteDef } from './virtual/core.js'
 import { RouteRenderer } from './virtual/root.js'
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import type { RuntimeConfig } from '../vite/types/options.js'
+
+/**
+ * Lazily-resolved React `createElement` and `renderToReadableStream`.
+ *
+ * When the framework is linked locally (e.g. `link:../reactify`), static
+ * top-level imports of `react` and `react-dom/server` resolve from the
+ * **framework's** `node_modules/react` (because Node walks up from the
+ * framework dist path). But the app element is created via Vite's SSR module
+ * runner, which resolves `react` from the **consumer's** `node_modules`.
+ * Two different React copies → null dispatcher → "Invalid hook call."
+ *
+ * Using `createRequire` pointed at the consumer project root ensures both
+ * the renderer and the app element share the same React instance.
+ */
+let _reactRequire: ReturnType<typeof createRequire> | undefined
+
+function ensureReactRequire(consumerRoot?: string): ReturnType<typeof createRequire> {
+  if (!_reactRequire) {
+    const root = consumerRoot ?? process.cwd()
+    _reactRequire = createRequire(join(root, 'noop.js'))
+  }
+  return _reactRequire
+}
+
+function getCreateElement(): typeof import('react')['createElement'] {
+  return ensureReactRequire()('react').createElement
+}
+
+function getRenderToReadableStream(): typeof import('react-dom/server')['renderToReadableStream'] {
+  return ensureReactRequire()('react-dom/server').renderToReadableStream
+}
 
 /**
  * Convert a React SSR ReadableStream to a Node.js Readable for Fastify.
@@ -23,6 +55,7 @@ function readableFromReactDom(stream: ReadableStream<Uint8Array>): Readable {
 
 export async function onShellReady(app: ReactNode): Promise<Readable | Error> {
   try {
+    const renderToReadableStream = getRenderToReadableStream()
     const stream = await renderToReadableStream(app)
     return readableFromReactDom(stream)
   } catch (error: unknown) {
@@ -33,6 +66,7 @@ export async function onShellReady(app: ReactNode): Promise<Readable | Error> {
 
 export async function onAllReady(app: ReactNode): Promise<Readable | Error> {
   try {
+    const renderToReadableStream = getRenderToReadableStream()
     const stream = await renderToReadableStream(app)
     await stream.allReady
     return readableFromReactDom(stream)
@@ -48,13 +82,21 @@ export async function createRenderFunction({
 }: {
   routes: Array<Record<string, unknown>>
   create: (...args: unknown[]) => ReactNode
-}): Promise<
+}, _scope?: FastifyInstance, config?: RuntimeConfig): Promise<
   (this: FastifyReply) => Promise<{
     routes: Array<Record<string, unknown>>
     context: unknown
     body?: Readable | Error
   }>
 > {
+  // Initialize React resolution from the consumer's project root so that
+  // react-dom/server resolves from the same React copy used by the app element.
+  // This prevents "Invalid hook call" from mismatched React instances when the
+  // framework is linked locally (link:../reactify).
+  if (config?.root) {
+    ensureReactRequire(config.root)
+  }
+
   return async function (this: FastifyReply) {
     const req = this.request as unknown as Record<string, unknown>
     if ((req.route as Record<string, unknown>)?.streaming) {
@@ -70,8 +112,11 @@ export async function createRenderFunction({
 export async function renderSSR(
   url: string,
   routes: RouteDef[],
-  options?: { bootstrapScripts?: string[] },
+  options?: { bootstrapScripts?: string[]; root?: string },
 ): Promise<ReadableStream<Uint8Array>> {
+  if (options?.root) ensureReactRequire(options.root)
+  const createElement = getCreateElement()
+  const renderToReadableStream = getRenderToReadableStream()
   const stream = await renderToReadableStream(
     createElement(RouteProvider, { routes, location: url, children: createElement(RouteRenderer) }),
     { bootstrapScripts: options?.bootstrapScripts ?? ['/assets/client.js'] },

@@ -3,12 +3,6 @@
 import { useState, useEffect, startTransition, useRef, Component, type ReactNode } from 'react'
 import { useRouteContext } from './core.js'
 import { consumePrefetch } from './prefetch-cache.js'
-import {
-  createFromFetch,
-  createTemporaryReferenceSet,
-  encodeReply,
-  setServerCallback,
-} from '@vitejs/plugin-rsc/browser'
 
 interface RscPayload {
   matches?: Array<{ element?: ReactNode }>
@@ -25,27 +19,31 @@ declare global {
 
 // Module-level server action callback registration
 // Registers before any component mounts — avoids the useEffect race window.
+// Uses dynamic import to avoid resolving @vitejs/plugin-rsc/browser's
+// virtual: protocol imports during server-side module loading.
 if (typeof window !== 'undefined') {
-  const serverCallback = async (id: string, args: unknown[]) => {
-    const temporaryReferences = createTemporaryReferenceSet()
-    const rscUrl = `${window.location.pathname}_.rsc${window.location.search}`
-    const payload = await createFromFetch<RscPayload>(
-      fetch(rscUrl, {
-        method: 'POST',
-        headers: { 'x-rsc-action': id },
-        body: await encodeReply(args, { temporaryReferences }),
-      }),
-      { temporaryReferences },
-    )
-    const setter = globalThis.__rscSetPayload as ((p: RscPayload) => void) | undefined
-    if (setter) {
-      startTransition(() => setter(payload))
+  import('@vitejs/plugin-rsc/browser').then(({ createTemporaryReferenceSet, encodeReply, createFromFetch, setServerCallback }) => {
+    const serverCallback = async (id: string, args: unknown[]) => {
+      const temporaryReferences = createTemporaryReferenceSet()
+      const rscUrl = `${window.location.pathname}_.rsc${window.location.search}`
+      const payload = await createFromFetch<RscPayload>(
+        fetch(rscUrl, {
+          method: 'POST',
+          headers: { 'x-rsc-action': id },
+          body: await encodeReply(args, { temporaryReferences }),
+        }),
+        { temporaryReferences },
+      )
+      const setter = globalThis.__rscSetPayload as ((p: RscPayload) => void) | undefined
+      if (setter) {
+        startTransition(() => setter(payload))
+      }
+      const { ok, data } = payload.returnValue ?? {}
+      if (!ok) throw data
+      return data
     }
-    const { ok, data } = payload.returnValue ?? {}
-    if (!ok) throw data
-    return data
-  }
-  setServerCallback(serverCallback)
+    setServerCallback(serverCallback)
+  })
 }
 
 class RscErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -65,9 +63,10 @@ class RscErrorBoundary extends Component<{ children: ReactNode }, { error: Error
   render() {
     if (this.state.error) {
       return (
-        <div role="alert">
-          <h2>RSC Render Error</h2>
-          <pre>{this.state.error.message}</pre>
+        <div role="alert" style={{ padding: '2rem', fontFamily: 'ui-monospace,monospace', background: '#0d1117', color: '#e6edf3', minHeight: '100vh' }}>
+          <h2 style={{ color: '#f85149', margin: 0 }}>RSC Render Error</h2>
+          <p style={{ color: '#f85149', fontWeight: 700 }}>{this.state.error.message}</p>
+          <pre style={{ background: '#161b22', padding: '1rem', borderRadius: '6px', overflowX: 'auto', fontSize: '.85rem', lineHeight: 1.5 }}>{this.state.error.stack}</pre>
         </div>
       )
     }
@@ -91,6 +90,8 @@ export default function RscSlot({ initialPayload }: { initialPayload?: RscPayloa
   const isFirstMount = useRef(true)
 
   // Navigation: fetch fresh flight data on location change
+  // Dynamic import to avoid resolving @vitejs/plugin-rsc/browser's
+  // virtual: protocol imports during server-side module loading.
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false
@@ -98,12 +99,19 @@ export default function RscSlot({ initialPayload }: { initialPayload?: RscPayloa
     }
     let cancelled = false
     const cached = consumePrefetch(location.pathname)
-    const promise = cached ?? createFromFetch<RscPayload>(fetch(rscUrl))
-    promise.then(p => {
-      if (!cancelled) {
-        startTransition(() => setPayload(p))
-      }
-    })
+    if (cached) {
+      cached.then(p => {
+        if (!cancelled) startTransition(() => setPayload(p))
+      })
+    } else {
+      import('@vitejs/plugin-rsc/browser').then(({ createFromFetch }) => {
+        if (!cancelled) {
+          createFromFetch<RscPayload>(fetch(rscUrl)).then(p => {
+            if (!cancelled) startTransition(() => setPayload(p))
+          })
+        }
+      })
+    }
     return () => { cancelled = true }
   }, [location.pathname, location.search])
 
@@ -118,5 +126,6 @@ export default function RscSlot({ initialPayload }: { initialPayload?: RscPayloa
   return <RscErrorBoundary>{payload.matches?.[0]?.element ?? null}</RscErrorBoundary>
 }
 
-// Re-export for use from other modules
-export { setServerCallback }
+// NOTE: setServerCallback was previously re-exported from @vitejs/plugin-rsc/browser
+// but is now imported dynamically to avoid virtual: protocol resolution on the server.
+// Consumers should import it directly from @vitejs/plugin-rsc/browser if needed.

@@ -1,5 +1,3 @@
-import { createFromFetch } from '@vitejs/plugin-rsc/browser'
-
 export interface RscPayload {
   matches?: Array<{ element?: React.ReactNode }>
   head?: { title?: string }
@@ -16,7 +14,10 @@ const cache = new Map<string, CacheEntry>()
 const TTL = 60_000
 const MAX_ENTRIES = 100
 
-export function prefetchRsc(path: string): Promise<RscPayload> | undefined {
+export async function prefetchRsc(path: string): Promise<RscPayload | undefined> {
+  // Dynamic import to avoid resolving @vitejs/plugin-rsc/browser's
+  // virtual: protocol imports during server-side module loading.
+  const { createFromFetch } = await import('@vitejs/plugin-rsc/browser')
   const key = path
   const cached = cache.get(key)
   if (cached && Date.now() - cached.timestamp < TTL) {

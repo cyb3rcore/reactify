@@ -24,6 +24,14 @@ import type { RscAttachedRequest } from '../rsc-handler.js'
 import routesManifest from '$app/routes.js'
 import ValtioHydrator from '$app/valtio-hydrator.js'
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 /**
  * URL suffix to differentiate RSC requests from SSR requests.
  * RSC requests end with '_.rsc', which is stripped to get the actual URL path.
@@ -429,41 +437,27 @@ async function handler(request: Request): Promise<Response> {
 
     return htmlResult
   } catch (error: unknown) {
-    // Narrow caught error for logging — prefer instanceof to assertion
+    // Log the error for server-side debugging
     const loggable =
       error instanceof Error
         ? `${error.constructor.name}: ${error.message}\n${error.stack?.split('\n').slice(0, 4).join('\n')}`
         : String(error)
     console.error('[rsc-entry] handler error:', loggable)
 
-    // Render error using Youch (dev error pages) with fallback.
-    // Boundary: Youch's generic params (Error, Request) shadow the
-    // global Error and Request types, making constructor inference
-    // unreliable. The runtime import resolves to a class whose
-    // constructor accepts (error, request, options?). This cast
-    // is isolated to this one helper call.
-    try {
-      const youchModule = await import('youch')
-      const YouchCtor = youchModule.default as unknown as new (
-        error: unknown,
-        request: unknown,
-      ) => { toHTML: (data?: Record<string, unknown>) => Promise<string> }
-      const youch = new YouchCtor(error, {})
-      const html = await youch.toHTML({ title: 'RSC Render Error' })
-      return new Response(html, {
-        status: 500,
-        headers: { 'Content-Type': 'text/html' },
-      })
-    } catch {
-      const errorText = error instanceof Error ? error.message : String(error) || 'Unknown error'
-      return new Response(
-        `<html><body><h1>500 — Internal Server Error</h1><pre>${errorText}</pre></body></html>`,
-        {
-          status: 500,
-          headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        },
-      )
-    }
+    // Render a simple HTML error page. We do NOT use Youch here because:
+    // 1. rsc-entry is a virtual module — Vite can't resolve bare
+    //    import('youch') from virtual modules (no physical file path)
+    // 2. Youch v3 crashes on null/undefined errors
+    // 3. The upstream (@fastify/react) acknowledges Youch is unreliable
+    //    in RSC production bundles
+    const errorName = error instanceof Error ? error.name : 'Error'
+    const errorMessage = error instanceof Error ? error.message : String(error) || 'Unknown error'
+    const errorStack = error instanceof Error ? (error.stack ?? '') : ''
+    const html = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>500 — ' + escapeHtml(errorMessage) + '</title>\n<style>\nbody{font-family:ui-monospace,monospace;background:#0d1117;color:#e6edf3;padding:2rem;max-width:960px;margin:0 auto}\nh1{color:#f85149;font-size:1.5rem;border-bottom:1px solid #30363d;padding-bottom:.5rem}\n.summary{margin:1rem 0;padding:1rem;background:#161b22;border-radius:6px;border:1px solid #30363d}\n.stack{background:#161b22;border-radius:6px;border:1px solid #30363d;overflow-x:auto}\n.stack pre{margin:0;padding:1rem;font-size:.85rem;line-height:1.5}\n.frame{color:#8b949e}\n.at{color:#58a6ff}\n.type{color:#f85149;font-weight:700}\n</style>\n</head>\n<body>\n<h1>500 — ' + escapeHtml(errorName) + '</h1>\n<div class="summary"><strong>' + escapeHtml(errorMessage) + '</strong></div>\n<div class="stack"><pre>' + (errorStack ? escapeHtml(errorStack) : escapeHtml(errorMessage)) + '</pre></div>\n</body>\n</html>'
+    return new Response(html, {
+      status: error instanceof Error && 'status' in error ? (error as any).status || 500 : 500,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    })
   }
 }
 

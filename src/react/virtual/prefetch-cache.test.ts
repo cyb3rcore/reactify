@@ -20,7 +20,7 @@ describe('prefetch-cache', () => {
 
   it('stores and retrieves a prefetched payload', async () => {
     const { prefetchRsc, consumePrefetch } = await import('./prefetch-cache.js')
-    prefetchRsc('/test')
+    await prefetchRsc('/test').catch(() => {})
     expect(consumePrefetch('/test')).toBeDefined()
   })
 
@@ -31,7 +31,7 @@ describe('prefetch-cache', () => {
 
   it('removes entry after consumption', async () => {
     const { prefetchRsc, consumePrefetch } = await import('./prefetch-cache.js')
-    prefetchRsc('/once')
+    await prefetchRsc('/once').catch(() => {})
     consumePrefetch('/once')
     expect(consumePrefetch('/once')).toBeUndefined()
   })
@@ -40,10 +40,10 @@ describe('prefetch-cache', () => {
     const { prefetchRsc, consumePrefetch } = await import('./prefetch-cache.js')
     // Fill cache to max
     for (let i = 0; i < 100; i++) {
-      prefetchRsc(`/path-${i}`)
+      await prefetchRsc(`/path-${i}`).catch(() => {})
     }
     // 101st entry should evict /path-0
-    prefetchRsc('/path-100')
+    await prefetchRsc('/path-100').catch(() => {})
     expect(consumePrefetch('/path-0')).toBeUndefined()
     // Most recent should still be available
     expect(consumePrefetch('/path-100')).toBeDefined()
@@ -55,12 +55,12 @@ describe('prefetch-cache', () => {
     // Use fake timers to simulate time passing
     vi.useFakeTimers()
 
-    prefetchRsc('/stale')
+    await prefetchRsc('/stale').catch(() => {})
     // Advance time past the 60s TTL
     vi.advanceTimersByTime(60_001)
 
     // TTL expired — calling prefetchRsc again should replace the entry
-    prefetchRsc('/stale')
+    await prefetchRsc('/stale').catch(() => {})
     // The old promise is gone; the new one is stored
     expect(consumePrefetch('/stale')).toBeDefined()
 
