@@ -82,8 +82,13 @@ export default function RscSlot({ initialRscPromise }: { initialRscPromise?: Pro
   const rscUrl = `${location.pathname}_.rsc${location.search}`
 
   // Start with initial SSR promise, or fetch direct if no SSR data
+  console.log('[RscSlot] render', location.pathname, { hasInitial: !!initialRscPromise, rscUrl })
   const [payloadPromise, setPayloadPromise] = useState<Promise<RscPayload>>(
-    () => initialRscPromise ?? createFromFetch(fetch(rscUrl)),
+    () => {
+      const p = initialRscPromise ?? createFromFetch(fetch(rscUrl))
+      console.log('[RscSlot] useState init', rscUrl)
+      return p
+    },
   )
 
   // Expose setter for module-level server action callback
@@ -93,15 +98,25 @@ export default function RscSlot({ initialRscPromise }: { initialRscPromise?: Pro
   }, [])
 
   const isFirstMount = useRef(true)
+  const lastFetchedUrl = useRef<string | null>(null)
 
   // Navigation: check prefetch cache, fall back to fetch
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false
+      console.log('[RscSlot] first mount skipped')
       return
     }
+    // Guard: skip if we already fetched this exact URL
+    if (rscUrl === lastFetchedUrl.current) {
+      console.log('[RscSlot] skip duplicate fetch for', rscUrl)
+      return
+    }
+    lastFetchedUrl.current = rscUrl
+    console.log('[RscSlot] nav effect', location.pathname, 'fetching', rscUrl)
     const cached = consumePrefetch(location.pathname)
     const promise = cached ?? createFromFetch(fetch(rscUrl))
+    console.log('[RscSlot] nav effect - setting new promise')
     setPayloadPromise(promise)
   }, [location.pathname, location.search])
 
