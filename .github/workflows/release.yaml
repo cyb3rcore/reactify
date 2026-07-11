@@ -18,15 +18,17 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+          cache: 'pnpm'
+          check-latest: true
 
-      - uses: pnpm/action-setup@v4
-
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
 
       - run: pnpm build
 
