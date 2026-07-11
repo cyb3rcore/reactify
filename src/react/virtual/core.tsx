@@ -6,11 +6,13 @@ import {
   useLayoutEffect,
   useCallback,
   useRef,
+  startTransition,
   type ReactNode,
 } from 'react'
 import { matchRoute, parseLocation, type ParsedLocation } from '../router.js'
 
 const isServer = typeof window === 'undefined'
+const useIsomorphicLayoutEffect = typeof document !== 'undefined' ? useLayoutEffect : useEffect
 const routeMapRef: { current: Record<string, unknown> } = { current: {} }
 
 export interface RouteDef {
@@ -121,7 +123,6 @@ export function RouteProvider({
       firstRenderRef.current = false
       return
     }
-    if (!match.route || match.route.rsc) return
 
     const loadData = async () => {
       const route = match.route!
@@ -147,14 +148,10 @@ export function RouteProvider({
     const onPop = () => {
       const loc = parseLocation(window.location)
       const result = matchRoute(routes, loc.pathname)
-      // RSC routes require server-side rendering — trigger a full page load
-      // for back/forward navigation to ensure SSR content is delivered.
-      if (result?.route?.rsc) {
-        window.location.reload()
-        return
-      }
-      setLocation(loc)
-      setMatch(result ?? { route: null, params: {} })
+      startTransition(() => {
+        setLocation(loc)
+        setMatch(result ?? { route: null, params: {} })
+      })
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -164,7 +161,7 @@ export function RouteProvider({
   // Must use useLayoutEffect so the handler is registered before the browser
   // paints — useEffect fires after paint, creating a race window where clicks
   // are not intercepted and cause full page reloads.
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const handler = (e: MouseEvent) => {
       if (!(e.target instanceof HTMLElement)) return
       const link = e.target.closest('a[href]')
@@ -175,18 +172,14 @@ export function RouteProvider({
       if (url.origin !== window.location.origin) return
       if (url.protocol !== 'http:' && url.protocol !== 'https:') return
       if (link.hasAttribute('download')) return
-      // Check if target is an RSC route — RSC content requires server-side
-      // rendering (SSR), so full page navigation is needed to produce the
-      // HTML with embedded __FLIGHT_DATA for client hydration.
-      const targetLoc = parseLocation(url.pathname)
-      const targetMatch = matchRoute(routes, targetLoc.pathname)
-      if (targetMatch?.route?.rsc) return
       e.preventDefault()
       window.history.pushState(null, '', link.href)
       const loc = parseLocation(window.location)
-      setLocation(loc)
-      const result = matchRoute(routes, loc.pathname)
-      setMatch(result ?? { route: null, params: {} })
+      startTransition(() => {
+        const result = matchRoute(routes, loc.pathname)
+        setLocation(loc)
+        setMatch(result ?? { route: null, params: {} })
+      })
     }
     document.addEventListener('click', handler)
     return () => document.removeEventListener('click', handler)
@@ -199,26 +192,17 @@ export function RouteProvider({
         window.history.go(to)
         return
       }
-      // RSC routes require server-side rendering — full page navigation
-      // produces HTML with embedded __FLIGHT_DATA for client hydration.
-      const toLoc = to.startsWith('/')
-        ? parseLocation(to)
-        : parseLocation(new URL(to, window.location.origin).pathname)
-      const toMatch = matchRoute(routes, toLoc.pathname)
-      if (toMatch?.route?.rsc) {
-        if (options?.replace) window.location.replace(to)
-        else window.location.href = to
-        return
-      }
       if (options?.replace) {
         window.history.replaceState(options.state ?? null, '', to)
       } else {
         window.history.pushState(options?.state ?? null, '', to)
       }
       const loc = parseLocation(window.location)
-      setLocation(loc)
-      const result = matchRoute(routes, loc.pathname)
-      setMatch(result ?? { route: null, params: {} })
+      startTransition(() => {
+        const result = matchRoute(routes, loc.pathname)
+        setLocation(loc)
+        setMatch(result ?? { route: null, params: {} })
+      })
     },
     [routes],
   )
