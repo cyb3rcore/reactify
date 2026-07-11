@@ -1,4 +1,4 @@
-# @cyb3rcore/reactify
+# reactify
 
 [reactify.sh](https://reactify.sh)
 [Docs (WIP)](https://docs.reactify.sh)
