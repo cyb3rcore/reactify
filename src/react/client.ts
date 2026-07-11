@@ -15,8 +15,7 @@ export interface RouteContextValue {
 
 export const RouteContext = createContext<RouteContextValue>({})
 
-export const isServer =
-  typeof window === 'undefined' && typeof process === 'object'
+export const isServer = typeof window === 'undefined' && typeof process === 'object'
 
 export function useRouteContext(): RouteContextValue {
   const routeContext = useContext(RouteContext)

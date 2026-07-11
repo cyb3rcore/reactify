@@ -211,9 +211,7 @@ export async function setup(
       )
     }
     // Close all fallback runners created for non-runnable environments
-    await Promise.all(
-      Array.from(fallbackRunners.values()).map((runner) => runner.close()),
-    )
+    await Promise.all(Array.from(fallbackRunners.values()).map((runner) => runner.close()))
     await reactifyViteDecoration.devServer!.close()
   })
 

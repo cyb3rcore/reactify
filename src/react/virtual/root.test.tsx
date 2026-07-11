@@ -9,7 +9,10 @@ import { RouteProvider, type RouteDef } from './core.js'
 
 // Set up mock route table with static paths for rendering tests
 const testRoutes: RouteDef[] = [
-  { path: '/', component: () => React.createElement('div', { 'data-testid': 'home' }, 'Home Page') },
+  {
+    path: '/',
+    component: () => React.createElement('div', { 'data-testid': 'home' }, 'Home Page'),
+  },
   { path: '/about', component: () => React.createElement('div', null, 'About Page') },
 ]
 
@@ -64,8 +67,14 @@ describe('RouteRenderer', () => {
   // When route has a param pattern, expect component receives params prop
   it('renders component with params prop', () => {
     const routeWithParam: RouteDef[] = [
-      { path: '/users/[id]', component: (props: Record<string, unknown>) =>
-        React.createElement('div', { 'data-testid': 'user' }, `User: ${(props as { params?: Record<string, string> }).params?.id}`),
+      {
+        path: '/users/[id]',
+        component: (props: Record<string, unknown>) =>
+          React.createElement(
+            'div',
+            { 'data-testid': 'user' },
+            `User: ${(props as { params?: Record<string, string> }).params?.id}`,
+          ),
       },
     ]
     render(
@@ -80,13 +89,19 @@ describe('RouteRenderer', () => {
   // When route has a layout wrapper, expect layout rendered around the route component
   it('renders component with layout wrapper', () => {
     function AuthLayout({ children }: { children: React.ReactNode }) {
-      return React.createElement('div', { 'data-testid': 'layout' },
+      return React.createElement(
+        'div',
+        { 'data-testid': 'layout' },
         React.createElement('header', null, 'Auth Layout'),
         children,
       )
     }
     const routesWithLayout: RouteDef[] = [
-      { path: '/admin', component: () => React.createElement('div', null, 'Admin'), layout: AuthLayout },
+      {
+        path: '/admin',
+        component: () => React.createElement('div', null, 'Admin'),
+        layout: AuthLayout,
+      },
     ]
     render(
       <RouteProvider routes={routesWithLayout} location="/admin">
@@ -104,13 +119,19 @@ describe('RouteRenderer', () => {
       {
         path: '/',
         component: (props: Record<string, unknown>) =>
-          React.createElement('div', null,
-            `Data: ${JSON.stringify((props as { data?: Record<string, unknown> }).data)}`),
+          React.createElement(
+            'div',
+            null,
+            `Data: ${JSON.stringify((props as { data?: Record<string, unknown> }).data)}`,
+          ),
       },
     ]
     render(
-      <RouteProvider routes={routesWithData as RouteDef[]} location="/"
-        ctxHydration={{ data: { message: 'from ctx' } }}>
+      <RouteProvider
+        routes={routesWithData as RouteDef[]}
+        location="/"
+        ctxHydration={{ data: { message: 'from ctx' } }}
+      >
         <RouteRenderer />
       </RouteProvider>,
     )

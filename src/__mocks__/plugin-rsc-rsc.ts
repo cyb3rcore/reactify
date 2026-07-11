@@ -22,15 +22,11 @@ export async function decodeReply(
   return []
 }
 
-export async function loadServerAction(
-  _id: string,
-): Promise<(...args: unknown[]) => unknown> {
+export async function loadServerAction(_id: string): Promise<(...args: unknown[]) => unknown> {
   return async () => {}
 }
 
-export async function decodeAction(
-  _formData: FormData,
-): Promise<() => Promise<unknown>> {
+export async function decodeAction(_formData: FormData): Promise<() => Promise<unknown>> {
   return async () => {}
 }
 

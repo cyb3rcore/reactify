@@ -18,16 +18,14 @@ export interface RscAttachedRequest extends Request {
 export async function convertRequest(
   req: FastifyRequest & { route?: Record<string, unknown> },
 ): Promise<Request> {
-  const host =
-    (req.headers as Record<string, string>)?.host ?? req.hostname
+  const host = (req.headers as Record<string, string>)?.host ?? req.hostname
   const url = new URL(req.url, `${req.protocol}://${host}`)
   const init: RequestInit & { duplex?: string } = {
     method: req.method,
     headers: new Headers(req.headers as Record<string, string>),
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    const contentType =
-      (req.headers as Record<string, string>)?.['content-type'] ?? ''
+    const contentType = (req.headers as Record<string, string>)?.['content-type'] ?? ''
     if (contentType.startsWith('multipart/form-data')) {
       // Use the buffered body from Fastify's content type parser.
       // prepareServer registers a multipart/form-data parser that buffers
@@ -35,10 +33,7 @@ export async function convertRequest(
       // Fastify's default rejection of multipart with "Unsupported Media Type".
       init.body = req.body as unknown as ReadableStream
     } else if (req.body) {
-      const body =
-        typeof req.body === 'string'
-          ? req.body
-          : JSON.stringify(req.body)
+      const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
       init.body = body
     }
   }
@@ -49,23 +44,18 @@ export async function convertRequest(
     (req.route?.state as Record<string, unknown> | undefined) ?? null
   ;(request as RscAttachedRequest).__server = req.route?.server ?? null
   ;(request as RscAttachedRequest).__req = req
-  ;(request as RscAttachedRequest).__reply = (req.route?.reply as FastifyReply | undefined) ?? undefined
+  ;(request as RscAttachedRequest).__reply =
+    (req.route?.reply as FastifyReply | undefined) ?? undefined
   return request
 }
 
 /**
  * Send a Web Fetch API Response through a Fastify reply.
  */
-export async function sendResponse(
-  reply: FastifyReply,
-  response: Response,
-): Promise<void> {
+export async function sendResponse(reply: FastifyReply, response: Response): Promise<void> {
   reply.code(response.status)
   for (const [key, value] of response.headers) {
-    if (
-      key.toLowerCase() === 'content-length' &&
-      response.body instanceof ReadableStream
-    ) {
+    if (key.toLowerCase() === 'content-length' && response.body instanceof ReadableStream) {
       continue
     }
     reply.header(key, value)

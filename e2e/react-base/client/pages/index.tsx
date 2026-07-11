@@ -18,7 +18,9 @@ export default function Index() {
         <a href="/users/settings">Settings</a>
         <a href="/users/42">User 42</a>
         <a href="/users/settings?tab=profile#prefs">Settings with params</a>
-        <a href="https://example.com" target="_blank">External</a>
+        <a href="https://example.com" target="_blank">
+          External
+        </a>
       </nav>
     </>
   )

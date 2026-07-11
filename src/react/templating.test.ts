@@ -6,7 +6,8 @@ function stripTemplate(fn: (data?: Record<string, unknown>) => string): string {
 }
 
 describe('createHtmlTemplates', () => {
-  const source = '<html><head></head><body><div id="root"><!-- element --></div><script type="module" src="/assets/client.js"></script></body></html>'
+  const source =
+    '<html><head></head><body><div id="root"><!-- element --></div><script type="module" src="/assets/client.js"></script></body></html>'
 
   it('creates universal and serverOnly template sets', () => {
     const templates = createHtmlTemplates(source, {})

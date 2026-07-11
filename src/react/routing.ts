@@ -160,7 +160,10 @@ export async function createRoute(
     preHandler.push(async (req: FastifyRequest) => {
       try {
         if (route.onEnter) {
-          const reqRoute = (req as unknown as Record<string, unknown>).route as Record<string, unknown>
+          const reqRoute = (req as unknown as Record<string, unknown>).route as Record<
+            string,
+            unknown
+          >
           if (!reqRoute.data) {
             reqRoute.data = {}
           }
@@ -185,22 +188,21 @@ export async function createRoute(
     handler = async (req: FastifyRequest, reply: FastifyReply) => {
       const ctx = { req, reply, server: scope }
       // Store scope in req.route so convertRequest can attach it to the RSC Request
-      const routeData = (req as unknown as Record<string, unknown>).route as Record<string, unknown> | undefined
+      const routeData = (req as unknown as Record<string, unknown>).route as
+        | Record<string, unknown>
+        | undefined
       if (routeData) {
         routeData.server = scope
       }
-      await rscStore.run(
-        ctx,
-        async () => {
-          setSyncContext(ctx)
-          const { convertRequest, sendResponse } = await import('./rsc-handler.js')
-          const request = await convertRequest(req)
-          const response = await (
-            client.rscHandler as { fetch: (req: unknown) => Promise<Response> }
-          ).fetch(request)
-          sendResponse(reply, response)
-        },
-      )
+      await rscStore.run(ctx, async () => {
+        setSyncContext(ctx)
+        const { convertRequest, sendResponse } = await import('./rsc-handler.js')
+        const request = await convertRequest(req)
+        const response = await (
+          client.rscHandler as { fetch: (req: unknown) => Promise<Response> }
+        ).fetch(request)
+        sendResponse(reply, response)
+      })
       return reply
     }
     // ---- Section divider ----
@@ -222,10 +224,12 @@ export async function createRoute(
   unshiftHook(route, 'onRequest', onRequest)
   unshiftHook(route, 'preHandler', preHandler)
 
-  ;(scope as unknown as {
-    route(opts: Record<string, unknown>): void
-    get(path: string, opts: Record<string, unknown>): void
-  }).route({
+  ;(
+    scope as unknown as {
+      route(opts: Record<string, unknown>): void
+      get(path: string, opts: Record<string, unknown>): void
+    }
+  ).route({
     url: routePath,
     method: route.method ?? ['GET', 'POST', 'PUT', 'DELETE'],
     errorHandler,
@@ -238,10 +242,12 @@ export async function createRoute(
   // Client-side code constructs action/fetch URLs as ${pathname}_.rsc.
   // Without this companion route, Fastify returns 404 for these requests.
   if (route.rsc) {
-    ;(scope as unknown as {
-      route(opts: Record<string, unknown>): void
-      get(path: string, opts: Record<string, unknown>): void
-    }).route({
+    ;(
+      scope as unknown as {
+        route(opts: Record<string, unknown>): void
+        get(path: string, opts: Record<string, unknown>): void
+      }
+    ).route({
       url: routePath + '_.rsc',
       method: ['GET', 'POST'],
       errorHandler,
@@ -253,10 +259,12 @@ export async function createRoute(
 
   if (route.getData) {
     // If getData is provided, register JSON endpoint for it
-    ;(scope as unknown as {
-      route(opts: Record<string, unknown>): void
-      get(path: string, opts: Record<string, unknown>): void
-    }).get(`/-/data${routePath}`, {
+    ;(
+      scope as unknown as {
+        route(opts: Record<string, unknown>): void
+        get(path: string, opts: Record<string, unknown>): void
+      }
+    ).get(`/-/data${routePath}`, {
       onRequest,
       async handler(req: FastifyRequest, _reply: FastifyReply) {
         return (route.getData as (ctx: Record<string, unknown>) => unknown)(
@@ -267,11 +275,7 @@ export async function createRoute(
   }
 }
 
-function unshiftHook(
-  route: Record<string, unknown>,
-  hookName: string,
-  hook: unknown,
-): void {
+function unshiftHook(route: Record<string, unknown>, hookName: string, hook: unknown): void {
   const existing = route[hookName]
   if (!existing) {
     route[hookName] = []

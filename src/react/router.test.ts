@@ -28,7 +28,8 @@ describe('matchPath', () => {
   })
   it('matches nested params', () => {
     expect(matchPath('/posts/[id]/comments/[commentId]', '/posts/1/comments/2')).toEqual({
-      id: '1', commentId: '2',
+      id: '1',
+      commentId: '2',
     })
   })
 })

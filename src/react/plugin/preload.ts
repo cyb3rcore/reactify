@@ -41,10 +41,7 @@ export async function closeBundle(
   const pages = Object.fromEntries(
     Object.entries(resolvedBundle ?? {}).filter(([, meta]) => {
       if (meta.facadeModuleId?.includes('/pages/')) {
-        meta.htmlPath = meta.facadeModuleId.replace(
-          /.*pages\/(.*)\.(j|t)sx$/,
-          'html/$1.html',
-        )
+        meta.htmlPath = meta.facadeModuleId.replace(/.*pages\/(.*)\.(j|t)sx$/, 'html/$1.html')
         return true
       }
       return false
@@ -53,14 +50,13 @@ export async function closeBundle(
 
   for (const page of Object.values(pages)) {
     const jsImports: string[] = (page.imports as string[]) ?? []
-    const cssImports: string[] =
-      (page.viteMetadata?.importedCss as string[]) ?? []
-    const images: string[] = (page.moduleIds as string[])?.filter((img) => {
-      return (
-        (page.modules?.[img]?.originalLength ?? 0) > assetsInlineLimit &&
-        imageFileRE.test(img)
-      )
-    }) ?? []
+    const cssImports: string[] = (page.viteMetadata?.importedCss as string[]) ?? []
+    const images: string[] =
+      (page.moduleIds as string[])?.filter((img) => {
+        return (
+          (page.modules?.[img]?.originalLength ?? 0) > assetsInlineLimit && imageFileRE.test(img)
+        )
+      }) ?? []
     let imagePreloads = '\n'
     for (let image of images) {
       image = image.slice(root.length + 1)
@@ -84,11 +80,7 @@ function appendHead(html: string, ...tags: string[]): string {
   return html.replace(/<head([^>]*)>/i, `<head$1>\n  ${content}`)
 }
 
-function writeHtml(
-  page: Record<string, unknown>,
-  pageHtml: string,
-  distDir: string,
-): void {
+function writeHtml(page: Record<string, unknown>, pageHtml: string, distDir: string): void {
   const { dir, base } = parsePath(page.htmlPath as string)
   const htmlDir = join(distDir, dir)
   if (!existsSync(htmlDir)) {

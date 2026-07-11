@@ -101,7 +101,7 @@ class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
   }
 
   /**
-    * Completes reactify runtime initialization.
+   * Completes reactify runtime initialization.
    *
    * This is intentionally not run during plugin registration; call
    * `await server.vite.ready()` when your app is ready to start Vite setup,
@@ -135,8 +135,10 @@ class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
           const hmrClient = () =>
             getSymbolState<{ client?: unknown }>(this.scope, hotSymbol)?.client ?? client
           const hmrRoute = () =>
-            getSymbolState<{ routeHash?: Map<string, RouteDefinition> }>(this.scope, hotSymbol)
-              ?.routeHash?.get(route.path!) ?? route
+            getSymbolState<{ routeHash?: Map<string, RouteDefinition> }>(
+              this.scope,
+              hotSymbol,
+            )?.routeHash?.get(route.path!) ?? route
 
           const hmrHandler = async (req: FastifyRequest, reply: FastifyReply) => {
             const handler = await this.runtimeConfig.createRouteHandler(

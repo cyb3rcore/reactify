@@ -19,7 +19,15 @@ export function makeIndexTest({ main, dev }: { main: MainFn; dev?: boolean }) {
   }
 }
 
-export function makeRscIndexTest({ main, dev, pageUrl }: { main: MainFn; dev?: boolean; pageUrl: string }) {
+export function makeRscIndexTest({
+  main,
+  dev,
+  pageUrl,
+}: {
+  main: MainFn
+  dev?: boolean
+  pageUrl: string
+}) {
   return async () => {
     const server = await main(dev)
     try {

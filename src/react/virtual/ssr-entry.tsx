@@ -76,9 +76,7 @@ function escapeScript(script: string): string {
  * `__FLIGHT_DATA` injection scripts for client-side hydration.
  * Matches the encoding used by rsc-html-stream/server's injectRSCPayload.
  */
-async function readRSCPayload(
-  rscBody: ReadableStream<Uint8Array>,
-): Promise<string> {
+async function readRSCPayload(rscBody: ReadableStream<Uint8Array>): Promise<string> {
   const reader = rscBody.getReader()
   const rscDecoder = new TextDecoder('utf-8', { fatal: true })
   let scripts = ''
@@ -118,10 +116,7 @@ async function readRSCPayload(
  * @param serverResponse - The RSC flight response from rsc-entry's handler
  * @returns A streaming HTML Response
  */
-export async function generateHTML(
-  request: Request,
-  serverResponse: Response,
-): Promise<Response> {
+export async function generateHTML(request: Request, serverResponse: Response): Promise<Response> {
   // Handle redirects — pass through if the RSC response is a redirect
   if (serverResponse.status >= 300 && serverResponse.status < 400) {
     return serverResponse
@@ -141,13 +136,11 @@ export async function generateHTML(
   const indexHtml = loadHtmlTemplate()
   const [templateBefore = '', templateAfter = ''] = indexHtml.split(el)
 
-  const bootstrapScriptContent =
-    await import.meta.viteRsc.loadBootstrapScriptContent('index')
+  const bootstrapScriptContent = await import.meta.viteRsc.loadBootstrapScriptContent('index')
 
   // Read the RSC payload and extract the matched route element
   const rscPayload = await createFromReadableStream<RscPayload>(serverResponse.body!)
-  const element =
-    rscPayload?.matches?.[0]?.element ?? null
+  const element = rscPayload?.matches?.[0]?.element ?? null
 
   // Create unhead instance and push head metadata from getMeta
   const head = createHead()
@@ -176,21 +169,13 @@ export async function generateHTML(
         controller.enqueue(encoder.encode(headInjectedBefore))
       },
       transform(chunk, controller) {
-        const str =
-          typeof chunk === 'string'
-            ? chunk
-            : decoder.decode(chunk, { stream: true })
+        const str = typeof chunk === 'string' ? chunk : decoder.decode(chunk, { stream: true })
         // Strip the _R_ bootstrap script — mount.js handles RSC hydration.
-        const cleaned = str.replace(
-          /<script id="_R_">.*?<\/script>/g,
-          '',
-        )
+        const cleaned = str.replace(/<script id="_R_">.*?<\/script>/g, '')
         controller.enqueue(encoder.encode(cleaned))
       },
       flush(controller) {
-        controller.enqueue(
-          encoder.encode(rscPayloadScripts + (templateAfter ?? '')),
-        )
+        controller.enqueue(encoder.encode(rscPayloadScripts + (templateAfter ?? '')))
       },
     }),
   )

@@ -4,7 +4,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, renderHook, act, cleanup } from '@testing-library/react'
 import React from 'react'
-import { RouteProvider, useRouteContext, useNavigate, useParams, useRouteData, useRouteHead } from './core.js'
+import {
+  RouteProvider,
+  useRouteContext,
+  useNavigate,
+  useParams,
+  useRouteData,
+  useRouteHead,
+} from './core.js'
 
 // Set up mock route table with static and parameterized paths
 const testRoutes = [
@@ -43,8 +50,7 @@ describe('RouteProvider', () => {
   it('matches initial location to a route', () => {
     function TestComponent() {
       const ctx = useRouteContext()
-      return React.createElement('div', null,
-        `Match: ${ctx.match?.path ?? 'none'}`)
+      return React.createElement('div', null, `Match: ${ctx.match?.path ?? 'none'}`)
     }
     render(
       <RouteProvider routes={testRoutes} location="/about">
@@ -72,8 +78,11 @@ describe('RouteProvider', () => {
   it('returns null match for unknown routes', () => {
     function TestComponent() {
       const ctx = useRouteContext()
-      return React.createElement('div', null,
-        `Match: ${ctx.match === null ? 'none' : ctx.match.path}`)
+      return React.createElement(
+        'div',
+        null,
+        `Match: ${ctx.match === null ? 'none' : ctx.match.path}`,
+      )
     }
     render(
       <RouteProvider routes={testRoutes} location="/unknown">
@@ -87,8 +96,7 @@ describe('RouteProvider', () => {
   it('uses server hydration data when provided', () => {
     function TestComponent() {
       const ctx = useRouteContext()
-      return React.createElement('div', null,
-        `Data: ${JSON.stringify(ctx.route?.data)}`)
+      return React.createElement('div', null, `Data: ${JSON.stringify(ctx.route?.data)}`)
     }
     render(
       <RouteProvider
@@ -178,14 +186,14 @@ describe('useRouteData', () => {
   it('returns data from hydration', () => {
     function TestComponent() {
       const data = useRouteData()
-      return React.createElement('div', null, `items=${(data as { items?: number[] })?.items?.length}`)
+      return React.createElement(
+        'div',
+        null,
+        `items=${(data as { items?: number[] })?.items?.length}`,
+      )
     }
     render(
-      <RouteProvider
-        routes={testRoutes}
-        location="/"
-        ctxHydration={{ data: { items: [1, 2, 3] } }}
-      >
+      <RouteProvider routes={testRoutes} location="/" ctxHydration={{ data: { items: [1, 2, 3] } }}>
         <TestComponent />
       </RouteProvider>,
     )
@@ -216,11 +224,17 @@ describe('navigate', () => {
   it('changes location via navigate()', () => {
     function TestComponent() {
       const { location, navigate } = useRouteContext()
-      return React.createElement('div', null,
+      return React.createElement(
+        'div',
+        null,
         React.createElement('span', { 'data-testid': 'path' }, location.pathname),
-        React.createElement('button', {
-          onClick: () => navigate('/about'),
-        }, 'Go to About'),
+        React.createElement(
+          'button',
+          {
+            onClick: () => navigate('/about'),
+          },
+          'Go to About',
+        ),
       )
     }
     render(
@@ -239,11 +253,17 @@ describe('navigate', () => {
   it('navigate with replace option', () => {
     function TestComponent() {
       const { location, navigate } = useRouteContext()
-      return React.createElement('div', null,
+      return React.createElement(
+        'div',
+        null,
         React.createElement('span', { 'data-testid': 'path' }, location.pathname),
-        React.createElement('button', {
-          onClick: () => navigate('/about', { replace: true }),
-        }, 'Replace'),
+        React.createElement(
+          'button',
+          {
+            onClick: () => navigate('/about', { replace: true }),
+          },
+          'Replace',
+        ),
       )
     }
     render(
@@ -262,16 +282,22 @@ describe('navigate', () => {
     const goSpy = vi.spyOn(window.history, 'go')
     function TestComponent() {
       const navigate = useNavigate()
-      return React.createElement('button', {
-        onClick: () => navigate(-1),
-      }, 'Back')
+      return React.createElement(
+        'button',
+        {
+          onClick: () => navigate(-1),
+        },
+        'Back',
+      )
     }
     render(
       <RouteProvider routes={testRoutes} location="/">
         <TestComponent />
       </RouteProvider>,
     )
-    act(() => { screen.getByText('Back').click() })
+    act(() => {
+      screen.getByText('Back').click()
+    })
     expect(goSpy).toHaveBeenCalledWith(-1)
     goSpy.mockRestore()
   })

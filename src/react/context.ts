@@ -69,12 +69,7 @@ export default class RouteContext {
   }
 
   // ---- Section divider ----
-  constructor(
-    server: FastifyInstance,
-    req: FastifyRequest,
-    reply: FastifyReply,
-    route: RouteDef,
-  ) {
+  constructor(server: FastifyInstance, req: FastifyRequest, reply: FastifyReply, route: RouteDef) {
     this.app = null
     this.server = server
     this.req = req

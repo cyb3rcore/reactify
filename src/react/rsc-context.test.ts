@@ -22,7 +22,11 @@ describe('rsc-context', () => {
     })
 
     it('clears context when set to null', () => {
-      setSyncContext({ req: {} as FastifyRequest, reply: {} as FastifyReply, server: {} as FastifyInstance })
+      setSyncContext({
+        req: {} as FastifyRequest,
+        reply: {} as FastifyReply,
+        server: {} as FastifyInstance,
+      })
       setSyncContext(null)
       expect(getContext()).toBeUndefined()
     })
@@ -79,7 +83,11 @@ describe('rsc-context', () => {
     })
 
     it('provides context within run scope', async () => {
-      const mockCtx = { req: {} as FastifyRequest, reply: {} as FastifyReply, server: {} as FastifyInstance }
+      const mockCtx = {
+        req: {} as FastifyRequest,
+        reply: {} as FastifyReply,
+        server: {} as FastifyInstance,
+      }
       await rscStore.run(mockCtx, async () => {
         expect(getContext()).toBe(mockCtx)
       })

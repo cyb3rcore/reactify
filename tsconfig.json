@@ -21,10 +21,5 @@
     "target": "esnext"
   },
   "include": ["src/**/*"],
-  "exclude": [
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/__mocks__/**",
-    "fixtures/**/*"
-  ]
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/__mocks__/**", "fixtures/**/*"]
 }

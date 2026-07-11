@@ -70,13 +70,13 @@ export function prepareServer(server: FastifyInstance): void {
   server.addHook('onListen', () => {
     const addr = server.server.address()
     if (!addr) return
-    const protocol =
-      (server as unknown as Record<string, unknown>).https ? 'https' : 'http'
+    const protocol = (server as unknown as Record<string, unknown>).https ? 'https' : 'http'
     if (typeof addr === 'object') {
       const { address, port } = addr as { address: string; port: number }
-      url = addr.family === 'IPv6'
-        ? `${protocol}://[${address}]:${port}`
-        : `${protocol}://${address}:${port}`
+      url =
+        addr.family === 'IPv6'
+          ? `${protocol}://[${address}]:${port}`
+          : `${protocol}://${address}:${port}`
     }
   })
   server.decorateRequest('fetchMap', null)
@@ -113,37 +113,31 @@ export async function createRoutes(
   } else {
     for (const path of Object.keys(from).sort((a, b) => (a > b ? -1 : 1))) {
       promises.push(
-        getRouteModule(path, (from as Record<string, unknown>)[path]).then(
-          (routeModule) => {
-            const routePath: string =
-              (routeModule.path as string) ??
-              filePathToRoutePath(path) ?? '/'
-            const routeName: string =
-              (routeModule.name as string) ??
-              path
-                .slice(6, -4)
-                .replace(param, '')
-                .replace(/^\/*|\/*$/g, '')
-                .replace(/\//g, '_')
+        getRouteModule(path, (from as Record<string, unknown>)[path]).then((routeModule) => {
+          const routePath: string = (routeModule.path as string) ?? filePathToRoutePath(path) ?? '/'
+          const routeName: string =
+            (routeModule.name as string) ??
+            path
+              .slice(6, -4)
+              .replace(param, '')
+              .replace(/^\/*|\/*$/g, '')
+              .replace(/\//g, '_')
 
-            return {
-              id: path,
-              name: routeName || 'catch-all',
-              path: routePath,
-              layout: routeModule.layout as string | undefined,
-              ...routeModule,
-            }
-          },
-        ),
+          return {
+            id: path,
+            name: routeName || 'catch-all',
+            path: routePath,
+            layout: routeModule.layout as string | undefined,
+            ...routeModule,
+          }
+        }),
       )
     }
   }
   return new Routes(...(await Promise.all(promises)))
 }
 
-export function getRouteModuleExports(
-  routeModule: Record<string, unknown>,
-): RouteExports {
+export function getRouteModuleExports(routeModule: Record<string, unknown>): RouteExports {
   return {
     component: routeModule.default,
     layout: routeModule.layout,
@@ -168,10 +162,7 @@ export function getRouteModuleExports(
   }
 }
 
-async function getRouteModule(
-  _path: string,
-  routeModuleInput: unknown,
-): Promise<RouteExports> {
+async function getRouteModule(_path: string, routeModuleInput: unknown): Promise<RouteExports> {
   if (typeof routeModuleInput === 'function') {
     const routeModule = await routeModuleInput()
     return getRouteModuleExports(routeModule as Record<string, unknown>)

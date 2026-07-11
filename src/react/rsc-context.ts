@@ -23,7 +23,11 @@ export function setSyncContext(ctx: RscContext | null): void {
 }
 
 function resolveContext(): RscContext | undefined {
-  return rscStore.getStore() ?? ((globalThis as unknown as Record<symbol, unknown>)[RSC_SYNC_CTX] as RscContext | undefined) ?? undefined
+  return (
+    rscStore.getStore() ??
+    ((globalThis as unknown as Record<symbol, unknown>)[RSC_SYNC_CTX] as RscContext | undefined) ??
+    undefined
+  )
 }
 
 export function getContext(): RscContext | undefined {

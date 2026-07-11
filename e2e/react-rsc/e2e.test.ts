@@ -107,6 +107,8 @@ test.describe('RSC e2e', () => {
     await page.goto(`${BASE_URL}/using-store`)
     await expect(page.locator('h2')).toHaveText('Valtio State Management')
     await expect(page.getByTestId('valtio-count')).toHaveText('Count: 42', { timeout: 10000 })
-    await expect(page.getByTestId('valtio-message')).toHaveText('Message: Hello from Valtio!', { timeout: 10000 })
+    await expect(page.getByTestId('valtio-message')).toHaveText('Message: Hello from Valtio!', {
+      timeout: 10000,
+    })
   })
 })

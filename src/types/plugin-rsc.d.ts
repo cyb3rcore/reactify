@@ -76,10 +76,7 @@ declare module '@vitejs/plugin-rsc/browser' {
 
   export const createTemporaryReferenceSet: () => unknown
 
-  export function findSourceMapURL(
-    filename: string,
-    environmentName: string,
-  ): string | null
+  export function findSourceMapURL(filename: string, environmentName: string): string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -112,26 +109,16 @@ declare module '@vitejs/plugin-rsc/rsc' {
     },
   ): Promise<T>
 
-  export function registerClientReference<T>(
-    proxy: T,
-    id: string,
-    name: string,
-  ): T
+  export function registerClientReference<T>(proxy: T, id: string, name: string): T
 
-  export const registerServerReference: <T>(
-    ref: T,
-    id: string,
-    name: string,
-  ) => T
+  export const registerServerReference: <T>(ref: T, id: string, name: string) => T
 
   export const decodeReply: (
     body: string | FormData,
     options?: DecodeReplyOptions,
   ) => Promise<unknown[]>
 
-  export function decodeAction(
-    body: FormData,
-  ): Promise<() => Promise<void>>
+  export function decodeAction(body: FormData): Promise<() => Promise<void>>
 
   export function decodeFormState(
     actionResult: unknown,
@@ -179,21 +166,15 @@ declare module '@vitejs/plugin-rsc/ssr' {
 // ---------------------------------------------------------------------------
 
 declare module '@vitejs/plugin-rsc/browser/internal' {
-  export function setRequireModule(options: {
-    requireModule: (id: string) => unknown
-  }): void
+  export function setRequireModule(options: { requireModule: (id: string) => unknown }): void
 }
 
 declare module '@vitejs/plugin-rsc/rsc/internal' {
-  export function setRequireModule(options: {
-    requireModule: (id: string) => unknown
-  }): void
+  export function setRequireModule(options: { requireModule: (id: string) => unknown }): void
 
   export function loadServerAction(id: string): Promise<Function>
 }
 
 declare module '@vitejs/plugin-rsc/ssr/internal' {
-  export function setRequireModule(options: {
-    requireModule: (id: string) => unknown
-  }): void
+  export function setRequireModule(options: { requireModule: (id: string) => unknown }): void
 }
