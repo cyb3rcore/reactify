@@ -146,8 +146,14 @@ export function RouteProvider({
   useEffect(() => {
     const onPop = () => {
       const loc = parseLocation(window.location)
-      setLocation(loc)
       const result = matchRoute(routes, loc.pathname)
+      // RSC routes require server-side rendering — trigger a full page load
+      // for back/forward navigation to ensure SSR content is delivered.
+      if (result?.route?.rsc) {
+        window.location.reload()
+        return
+      }
+      setLocation(loc)
       setMatch(result ?? { route: null, params: {} })
     }
     window.addEventListener('popstate', onPop)
@@ -169,6 +175,12 @@ export function RouteProvider({
       if (url.origin !== window.location.origin) return
       if (url.protocol !== 'http:' && url.protocol !== 'https:') return
       if (link.hasAttribute('download')) return
+      // Check if target is an RSC route — RSC content requires server-side
+      // rendering (SSR), so full page navigation is needed to produce the
+      // HTML with embedded __FLIGHT_DATA for client hydration.
+      const targetLoc = parseLocation(url.pathname)
+      const targetMatch = matchRoute(routes, targetLoc.pathname)
+      if (targetMatch?.route?.rsc) return
       e.preventDefault()
       window.history.pushState(null, '', link.href)
       const loc = parseLocation(window.location)
@@ -185,6 +197,17 @@ export function RouteProvider({
       if (isServer) return
       if (typeof to === 'number') {
         window.history.go(to)
+        return
+      }
+      // RSC routes require server-side rendering — full page navigation
+      // produces HTML with embedded __FLIGHT_DATA for client hydration.
+      const toLoc = to.startsWith('/')
+        ? parseLocation(to)
+        : parseLocation(new URL(to, window.location.origin).pathname)
+      const toMatch = matchRoute(routes, toLoc.pathname)
+      if (toMatch?.route?.rsc) {
+        if (options?.replace) window.location.replace(to)
+        else window.location.href = to
         return
       }
       if (options?.replace) {
