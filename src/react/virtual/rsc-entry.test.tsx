@@ -1,0 +1,163 @@
+// @vitest-environment node
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
+
+// Mock $app/routes.js so the handler integration test can trigger the catch block.
+// Must be at the top level — vitest hoists vi.mock before all imports.
+vi.mock('$app/routes.js', () => ({
+  default: {
+    '/page.tsx': () => {
+      throw new Error('mock route error')
+    },
+  },
+}))
+
+// Mock $app/valtio-hydrator.js to avoid import resolution issues in handler tests.
+vi.mock('$app/valtio-hydrator.js', () => ({
+  default: ({ children }: { children: any }) => children,
+}))
+
+// ---------------------------------------------------------------------------
+// renderErrorPage — unit tests
+// ---------------------------------------------------------------------------
+
+describe('renderErrorPage', () => {
+  let renderErrorPage: (error: unknown) => Response
+  let originalNodeEnv: string | undefined
+
+  beforeAll(async () => {
+    const mod = await import('./rsc-entry.js')
+    renderErrorPage = mod.renderErrorPage
+  })
+
+  beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV
+  })
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv
+  })
+
+  it('production mode returns generic 500', () => {
+    process.env.NODE_ENV = 'production'
+    const res = renderErrorPage(new Error('fail'))
+
+    expect(res.status).toBe(500)
+    expect(res.headers.get('Content-Type')).toBe('text/html; charset=utf-8')
+    return res.text().then((body) => {
+      expect(body).toContain('Internal Server Error')
+      expect(body).not.toContain('fail')
+    })
+  })
+
+  it('dev mode returns error details including message and stack', () => {
+    process.env.NODE_ENV = 'development'
+    const error = new Error('test error')
+    error.stack = 'Error: test error\n    at somewhere (file.ts:10:20)'
+
+    const res = renderErrorPage(error)
+
+    expect(res.status).toBe(500)
+    return res.text().then((body) => {
+      expect(body).toContain('test error')
+      expect(body).toContain('file.ts:10:20')
+    })
+  })
+
+  it('dev mode shows error name (e.g. TypeError)', () => {
+    process.env.NODE_ENV = 'development'
+    const error = new TypeError('invalid type')
+    error.stack = 'TypeError: invalid type\n    at test.ts:5:10'
+
+    const res = renderErrorPage(error)
+
+    return res.text().then((body) => {
+      expect(body).toContain('TypeError')
+      expect(body).toContain('invalid type')
+    })
+  })
+
+  it('non-Error thrown renders string representation in dev', () => {
+    process.env.NODE_ENV = 'development'
+
+    const res = renderErrorPage('string error')
+
+    expect(res.status).toBe(500)
+    return res.text().then((body) => {
+      expect(body).toContain('string error')
+    })
+  })
+
+  it('custom status from error.status property', () => {
+    process.env.NODE_ENV = 'development'
+    const error = Object.assign(new Error('not found'), { status: 404 })
+
+    const res = renderErrorPage(error)
+
+    expect(res.status).toBe(404)
+    return res.text().then((body) => {
+      expect(body).toContain('not found')
+    })
+  })
+
+  it('escapes HTML in error message to prevent XSS', () => {
+    process.env.NODE_ENV = 'development'
+
+    const res = renderErrorPage(new Error('<script>alert("xss")</script>'))
+
+    return res.text().then((body) => {
+      expect(body).toContain('&lt;')
+      expect(body).not.toContain('<script>')
+      expect(body).toContain('alert(&quot;xss&quot;)')
+    })
+  })
+
+  it('handles null without crashing', () => {
+    process.env.NODE_ENV = 'development'
+
+    const resNull = renderErrorPage(null)
+    expect(resNull.status).toBe(500)
+    return resNull.text().then((body) => {
+      // String(null) is 'null'
+      expect(body).toContain('null')
+    })
+  })
+
+  it('handles undefined error', () => {
+    process.env.NODE_ENV = 'development'
+
+    const resUndef = renderErrorPage(undefined)
+    expect(resUndef.status).toBe(500)
+    return resUndef.text().then((body) => {
+      // String(undefined) is 'undefined' — it's truthy so the || 'Unknown error'
+      // fallback doesn't trigger. The message shown is "undefined".
+      expect(body).toContain('undefined')
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// handler — integration smoke test for catch block
+// ---------------------------------------------------------------------------
+
+describe('handler error path', () => {
+  afterAll(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('catch block is reached and returns error page', async () => {
+    process.env.NODE_ENV = 'development'
+
+    const mod = await import('./rsc-entry.js')
+    const handler = (mod as any).default.fetch as (req: Request) => Promise<Response>
+
+    // filePathToRoutePath('/page.tsx') => '/page', so request /page to match
+    const request = new Request('http://localhost/page')
+    const res = await handler(request)
+
+    expect(res.status).toBe(500)
+    expect(res.headers.get('Content-Type')).toBe('text/html; charset=utf-8')
+
+    const body = await res.text()
+    expect(body).toContain('mock route error')
+  })
+})
