@@ -138,6 +138,13 @@ export async function createRoutes(
 }
 
 export function getRouteModuleExports(routeModule: Record<string, unknown>): RouteExports {
+  // RSC routes use server components for data fetching, not getData
+  if (routeModule.rsc && routeModule.getData) {
+    throw new Error(
+      `Route exports both rsc: true and getData() — these are mutually exclusive. ` +
+      `Use server components for data fetching in RSC routes instead of getData.`,
+    )
+  }
   return {
     component: routeModule.default,
     layout: routeModule.layout,
