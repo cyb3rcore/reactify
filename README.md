@@ -28,3 +28,7 @@ Scaffold a new project with the CLI and start developing immediately.
 ## License
 
 MIT
+
+---
+
+Forked from [@fastify/fastify-vite](https://github.com/fastify/fastify-vite).
