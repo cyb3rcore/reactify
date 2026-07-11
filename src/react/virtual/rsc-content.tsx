@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, use, startTransition, useRef, Component, type ReactNode } from 'react'
+import { useState, useEffect, startTransition, useRef, Component, type ReactNode } from 'react'
 import { useRouteContext } from './core.js'
 import { consumePrefetch } from './prefetch-cache.js'
 import {
@@ -20,13 +20,11 @@ interface RscPayload {
 export type { RscPayload }
 
 declare global {
-  var __rscSetPayloadPromise: ((p: Promise<RscPayload>) => void) | undefined
+  var __rscSetPayload: ((p: RscPayload) => void) | undefined
 }
 
 // Module-level server action callback registration
 // Registers before any component mounts — avoids the useEffect race window.
-// The callback receives the action ID and args, POSTs to the _.rsc endpoint,
-// and updates the RscSlot component via the module-level setter ref.
 if (typeof window !== 'undefined') {
   const serverCallback = async (id: string, args: unknown[]) => {
     const temporaryReferences = createTemporaryReferenceSet()
@@ -39,9 +37,9 @@ if (typeof window !== 'undefined') {
       }),
       { temporaryReferences },
     )
-    const setter = globalThis.__rscSetPayloadPromise as ((p: Promise<RscPayload>) => void) | undefined
+    const setter = globalThis.__rscSetPayload as ((p: RscPayload) => void) | undefined
     if (setter) {
-      startTransition(() => setter(Promise.resolve(payload)))
+      startTransition(() => setter(payload))
     }
     const { ok, data } = payload.returnValue ?? {}
     if (!ok) throw data
@@ -77,51 +75,37 @@ class RscErrorBoundary extends Component<{ children: ReactNode }, { error: Error
   }
 }
 
-export default function RscSlot({ initialRscPromise }: { initialRscPromise?: Promise<RscPayload> }) {
+export default function RscSlot({ initialPayload }: { initialPayload?: RscPayload | null }) {
   const { location } = useRouteContext()
   const rscUrl = `${location.pathname}_.rsc${location.search}`
 
-  // Start with initial SSR promise, or fetch direct if no SSR data
-  console.log('[RscSlot] render', location.pathname, { hasInitial: !!initialRscPromise, rscUrl })
-  const [payloadPromise, setPayloadPromise] = useState<Promise<RscPayload>>(
-    () => {
-      const p = initialRscPromise ?? createFromFetch(fetch(rscUrl))
-      console.log('[RscSlot] useState init', rscUrl)
-      return p
-    },
-  )
+  // Start with SSR payload (if available), or null (SPA navigation)
+  const [payload, setPayload] = useState<RscPayload | null>(initialPayload ?? null)
 
   // Expose setter for module-level server action callback
   useEffect(() => {
-    globalThis.__rscSetPayloadPromise = setPayloadPromise
-    return () => { delete globalThis.__rscSetPayloadPromise }
+    globalThis.__rscSetPayload = setPayload
+    return () => { delete globalThis.__rscSetPayload }
   }, [])
 
   const isFirstMount = useRef(true)
-  const lastFetchedUrl = useRef<string | null>(null)
 
-  // Navigation: check prefetch cache, fall back to fetch
+  // Navigation: fetch fresh flight data on location change
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false
-      console.log('[RscSlot] first mount skipped')
       return
     }
-    // Guard: skip if we already fetched this exact URL
-    if (rscUrl === lastFetchedUrl.current) {
-      console.log('[RscSlot] skip duplicate fetch for', rscUrl)
-      return
-    }
-    lastFetchedUrl.current = rscUrl
-    console.log('[RscSlot] nav effect', location.pathname, 'fetching', rscUrl)
+    let cancelled = false
     const cached = consumePrefetch(location.pathname)
-    const promise = cached ?? createFromFetch(fetch(rscUrl))
-    console.log('[RscSlot] nav effect - setting new promise')
-    setPayloadPromise(promise)
+    const promise = cached ?? createFromFetch<RscPayload>(fetch(rscUrl))
+    promise.then(p => {
+      if (!cancelled) {
+        startTransition(() => setPayload(p))
+      }
+    })
+    return () => { cancelled = true }
   }, [location.pathname, location.search])
-
-  // Suspense — React preserves SSR HTML while promise is pending
-  const payload = use(payloadPromise)
 
   // Update document title from payload
   useEffect(() => {
@@ -130,6 +114,7 @@ export default function RscSlot({ initialRscPromise }: { initialRscPromise?: Pro
     }
   }, [payload])
 
+  if (!payload) return null
   return <RscErrorBoundary>{payload.matches?.[0]?.element ?? null}</RscErrorBoundary>
 }
 

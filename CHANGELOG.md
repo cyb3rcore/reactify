@@ -1,5 +1,35 @@
 # @cyb3rcore/reactify
 
+## 1.0.2
+
+### Patch Changes
+
+- fix: infinite remount loop in RscSlot caused by use() + React.lazy + Suspense
+
+  RscSlot used `use(payloadPromise)` inside a React.lazy component, nested in
+  a Suspense boundary. When `use()` suspends on a pending promise, React
+  **unmounts and remounts** the lazy component's content on each retry. Each
+  remount re-runs the useState initializer, creating a new fetch, causing an
+  infinite loop of `GET /page_.rsc` requests (~15ms apart).
+
+  Root cause identified via agent-browser console logging showing the useState
+  initializer being called repeatedly, confirming the component was being fully
+  remounted rather than re-rendered.
+
+  Fix:
+
+  - Removed `use()` from RscSlot — replaced with effect-based promise resolution
+    to `useState<RscPayload | null>`
+  - Removed `React.lazy` wrapper from RouteRenderer — RscSlot is imported eagerly
+  - Removed Suspense wrapper from the RSC branch — component handles its own
+    loading state (null → element)
+  - Resolve flight data BEFORE hydration in mount.tsx bootstrap, passing
+    the resolved payload (not a promise) as `initialPayload`
+  - SSR entry passes `rscPayload` directly as `initialPayload` (not wrapped in
+    `Promise.resolve()`)
+  - `__rscSetPayloadPromise` renamed to `__rscSetPayload` since the setter now
+    receives the resolved payload, not a promise
+
 ## 1.0.1
 
 ### Patch Changes
