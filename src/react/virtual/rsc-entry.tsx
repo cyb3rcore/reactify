@@ -33,6 +33,35 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Render an HTML error page for development or production.
+ *
+ * - **Dev mode** (`NODE_ENV !== 'production'`): Shows error name, message,
+ *   and full stack trace with a dark-themed styled page.
+ * - **Production mode**: Shows a generic "500 — Internal Server Error" page
+ *   with no stack traces or file paths.
+ *
+ * The response status is derived from the error's `.status` property if
+ * present (e.g. `Object.assign(new Error('not found'), { status: 404 })`),
+ * falling back to 500.
+ */
+export function renderErrorPage(error: unknown): Response {
+  const errorMessage = error instanceof Error ? error.message : String(error) || 'Unknown error'
+  const isDev = typeof process !== 'undefined' && process.env.NODE_ENV !== 'production'
+  let html: string
+  if (isDev) {
+    const errorName = error instanceof Error ? error.name : 'Error'
+    const errorStack = error instanceof Error ? (error.stack ?? '') : ''
+    html = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>500 — ' + escapeHtml(errorMessage) + '</title>\n<style>\nbody{font-family:ui-monospace,monospace;background:#0d1117;color:#e6edf3;padding:2rem;max-width:960px;margin:0 auto}\nh1{color:#f85149;font-size:1.5rem;border-bottom:1px solid #30363d;padding-bottom:.5rem}\n.summary{margin:1rem 0;padding:1rem;background:#161b22;border-radius:6px;border:1px solid #30363d}\n.stack{background:#161b22;border-radius:6px;border:1px solid #30363d;overflow-x:auto}\n.stack pre{margin:0;padding:1rem;font-size:.85rem;line-height:1.5}\n</style>\n</head>\n<body>\n<h1>500 — ' + escapeHtml(errorName) + '</h1>\n<div class="summary"><strong>' + escapeHtml(errorMessage) + '</strong></div>\n<div class="stack"><pre>' + escapeHtml(errorStack) + '</pre></div>\n</body>\n</html>'
+  } else {
+    html = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>500 — Internal Server Error</title>\n</head>\n<body>\n<h1>500 — Internal Server Error</h1>\n</body>\n</html>'
+  }
+  return new Response(html, {
+    status: error instanceof Error && 'status' in error ? (error as any).status || 500 : 500,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  })
+}
+
+/**
  * URL suffix to differentiate RSC requests from SSR requests.
  * RSC requests end with '_.rsc', which is stripped to get the actual URL path.
  */
@@ -444,22 +473,7 @@ async function handler(request: Request): Promise<Response> {
         : String(error)
     console.error('[rsc-entry] handler error:', loggable)
 
-    // Render error page. In dev mode show full stack trace for debugging.
-    // In production, show a generic message — no stack traces or file paths.
-    const errorMessage = error instanceof Error ? error.message : String(error) || 'Unknown error'
-    const isDev = typeof process !== 'undefined' && process.env.NODE_ENV !== 'production'
-    let html: string
-    if (isDev) {
-      const errorName = error instanceof Error ? error.name : 'Error'
-      const errorStack = error instanceof Error ? (error.stack ?? '') : ''
-      html = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>500 — ' + escapeHtml(errorMessage) + '</title>\n<style>\nbody{font-family:ui-monospace,monospace;background:#0d1117;color:#e6edf3;padding:2rem;max-width:960px;margin:0 auto}\nh1{color:#f85149;font-size:1.5rem;border-bottom:1px solid #30363d;padding-bottom:.5rem}\n.summary{margin:1rem 0;padding:1rem;background:#161b22;border-radius:6px;border:1px solid #30363d}\n.stack{background:#161b22;border-radius:6px;border:1px solid #30363d;overflow-x:auto}\n.stack pre{margin:0;padding:1rem;font-size:.85rem;line-height:1.5}\n</style>\n</head>\n<body>\n<h1>500 — ' + escapeHtml(errorName) + '</h1>\n<div class="summary"><strong>' + escapeHtml(errorMessage) + '</strong></div>\n<div class="stack"><pre>' + escapeHtml(errorStack) + '</pre></div>\n</body>\n</html>'
-    } else {
-      html = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>500 — Internal Server Error</title>\n</head>\n<body>\n<h1>500 — Internal Server Error</h1>\n</body>\n</html>'
-    }
-    return new Response(html, {
-      status: error instanceof Error && 'status' in error ? (error as any).status || 500 : 500,
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
-    })
+    return renderErrorPage(error)
   }
 }
 

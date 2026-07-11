@@ -75,16 +75,21 @@ describe('createErrorHandler', () => {
     return { log: { error: vi.fn() } } as unknown as FastifyInstance
   }
 
-  it('returns 500 HTML page in dev mode', async () => {
+  function makeReply() {
+    const send = vi.fn()
+    return {
+      code: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
+      send,
+    } as unknown as FastifyReply
+  }
+
+  it('returns 500 HTML page in dev mode with error details', async () => {
     const scope = makeScope()
     const config = { dev: true } as RuntimeConfig
     const handler = createErrorHandler({}, scope, config)
     const mockReq = { raw: {}, log: { error: vi.fn() } } as unknown as FastifyRequest
-    const reply = {
-      code: vi.fn().mockReturnThis(),
-      type: vi.fn().mockReturnThis(),
-      send: vi.fn(),
-    } as unknown as FastifyReply
+    const reply = makeReply()
 
     const error = new Error('test error')
     await handler(error, mockReq, reply)
@@ -92,7 +97,12 @@ describe('createErrorHandler', () => {
     expect(mockReq.log.error).toHaveBeenCalledWith(error)
     expect(reply.code).toHaveBeenCalledWith(500)
     expect(reply.type).toHaveBeenCalledWith('text/html')
-    expect(reply.send).toHaveBeenCalled()
+    // Should include the error message and stack in dev
+    const html = vi.mocked(reply.send).mock.calls[0][0] as string
+    expect(html).toContain('test error')
+    expect(html).toContain('Error')
+    // Dev page should have stack trace styling
+    expect(html).toContain('stack')
   })
 
   it('returns empty 500 in production mode', async () => {
@@ -100,16 +110,27 @@ describe('createErrorHandler', () => {
     const config = { dev: false } as RuntimeConfig
     const handler = createErrorHandler({}, scope, config)
     const mockReq = { raw: {}, log: { error: vi.fn() } } as unknown as FastifyRequest
-    const reply = {
-      code: vi.fn().mockReturnThis(),
-      type: vi.fn().mockReturnThis(),
-      send: vi.fn(),
-    } as unknown as FastifyReply
+    const reply = makeReply()
 
     await handler(new Error('prod error'), mockReq, reply)
 
     expect(reply.code).toHaveBeenCalledWith(500)
     expect(reply.send).toHaveBeenCalledWith('')
+  })
+
+  it('escapes HTML in error message in dev mode', async () => {
+    const scope = makeScope()
+    const config = { dev: true } as RuntimeConfig
+    const handler = createErrorHandler({}, scope, config)
+    const mockReq = { raw: {}, log: { error: vi.fn() } } as unknown as FastifyRequest
+    const reply = makeReply()
+
+    const error = new Error('<script>alert("xss")</script>')
+    await handler(error, mockReq, reply)
+
+    const html = vi.mocked(reply.send).mock.calls[0][0] as string
+    expect(html).toContain('&lt;script&gt;')
+    expect(html).not.toContain('<script>')
   })
 })
 
