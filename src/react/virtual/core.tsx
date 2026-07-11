@@ -126,6 +126,7 @@ export function RouteProvider({
 
     const loadData = async () => {
       const route = match.route!
+      console.log('[RouteProvider] loadData', location.pathname, { hasGetData: !!route.getData, routeType: route.rsc ? 'rsc' : 'csr' })
       const state: Record<string, unknown> = { data: {} }
 
       if (route.getData) {
