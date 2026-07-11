@@ -27,6 +27,34 @@ try {
   // Not available — will be handled by fallback resolution
 }
 
+// Resolve rsc-html-stream path for Vite alias — needed because pnpm link:
+// overrides don't hoist transitive dependencies. Without this alias, the
+// dynamic import('rsc-html-stream/client') in mount.tsx fails to resolve.
+let rscHtmlStreamResolved: string | undefined
+try {
+  if (rscRequire) {
+    rscHtmlStreamResolved = rscRequire.resolve('rsc-html-stream/client').replace(/\\/g, '/')
+    rscHtmlStreamResolved = rscHtmlStreamResolved.replace(/\/client\.js$/, '')
+  }
+} catch {
+  // Not installed — will fail at runtime with a clear error
+}
+
+// Resolve devalue path for Vite alias — same reason as rsc-html-stream.
+// Virtual modules ($app/ssr-entry.js) import devalue and need this alias
+// since they have no physical filesystem path for resolution.
+let devalueResolved: string | undefined
+try {
+  if (rscRequire) {
+    devalueResolved = rscRequire.resolve('devalue').replace(/\\/g, '/')
+    devalueResolved = devalueResolved.replace(/\/devalue\.cjs$/, '')
+    devalueResolved = devalueResolved.replace(/\/index\.js$/, '')
+    devalueResolved = devalueResolved.replace(/\/devalue\.mjs$/, '')
+  }
+} catch {
+  // Not installed — will fail at runtime with a clear error
+}
+
 // Detect the reactify package name(s) so the plugin can exclude them from
 // the client's dep optimizer. When the server-only subpath (@cyb3rcore
 // /reactify/server with node:async_hooks) is imported from an RSC page
@@ -93,6 +121,23 @@ export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plug
         return config.call({ ts: options.ts ?? false }, rawConfig, ctx)
       },
       configResolved: configResolved.bind(context),
+      configEnvironment(name: string, options: any) {
+        // Filter react/react-dom from SSR/RSC resolve.noExternal — these must
+        // always be provided by the consumer to avoid duplicate copies.
+        // This runs AFTER all plugins' config hooks, so @vitejs/plugin-rsc's
+        // additions are guaranteed to be present for us to clean up.
+        if (name === 'ssr' || name === 'rsc') {
+          const resolve = options.resolve
+          if (resolve && Array.isArray(resolve.noExternal)) {
+            const filtered = resolve.noExternal.filter(
+              (pkg: string) => pkg !== 'react' && pkg !== 'react-dom',
+            )
+            if (filtered.length !== resolve.noExternal.length) {
+              resolve.noExternal = filtered
+            }
+          }
+        }
+      },
       resolveId(id: string, importer?: string) {
         // Resolve @vitejs/plugin-rsc/ subpath imports from virtual modules
         // (e.g. @vitejs/plugin-rsc/rsc, @vitejs/plugin-rsc/browser).
@@ -394,6 +439,79 @@ function config(
       rawConfig.resolve = {
         ...(rawConfig.resolve as Record<string, unknown>),
         alias: [...topAliases, rscPkgAlias],
+      }
+    }
+  }
+
+  // Ensure a single React instance across all environments by deduplicating
+  // resolves to the consumer's copy. Without this, the Vite module runner may
+  // resolve React from the framework's node_modules when processing virtual
+  // modules ($app/*), causing "Invalid hook call" from mismatched React copies.
+  if (!rawConfig.resolve) rawConfig.resolve = {}
+  const resolveConfig = rawConfig.resolve as Record<string, unknown>
+  const existingDedupe = (resolveConfig.dedupe ?? []) as string[]
+  if (!existingDedupe.includes('react')) {
+    resolveConfig.dedupe = [...existingDedupe, 'react', 'react-dom']
+  }
+
+  // Propagate React deduplication to each environment
+  for (const envName of ['ssr', 'rsc', 'client'] as const) {
+    const env = (environments[envName] ?? {}) as Record<string, unknown>
+    const envResolve = (env.resolve ?? {}) as Record<string, unknown>
+    const envDedupe = (envResolve.dedupe ?? []) as string[]
+    if (!envDedupe.includes('react')) {
+      envResolve.dedupe = [...envDedupe, 'react', 'react-dom']
+      env.resolve = envResolve
+      environments[envName] = env
+    }
+  }
+
+  // Ensure framework dependencies resolve even when the package isn't hoisted
+  // (e.g., when reactify is installed via file: or link: protocol).
+  // Virtual modules ($app/*) have no physical filesystem path, so Vite can't
+  // resolve bare specifiers from them using the standard algorithm. Providing
+  // explicit aliases lets Vite resolve these from the framework's node_modules.
+  interface AliasEntry {
+    find: string
+    replacement: string
+    environments: string[]
+  }
+  const requiredAliases: AliasEntry[] = []
+  if (rscHtmlStreamResolved) {
+    requiredAliases.push({
+      find: 'rsc-html-stream',
+      replacement: rscHtmlStreamResolved,
+      environments: ['client', 'rsc', 'ssr'],
+    })
+  }
+  if (devalueResolved) {
+    requiredAliases.push({
+      find: 'devalue',
+      replacement: devalueResolved,
+      environments: ['rsc', 'ssr'],
+    })
+  }
+
+  for (const alias of requiredAliases) {
+    // Top-level resolve
+    const topAliases = ((rawConfig.resolve as Record<string, unknown>)?.alias ?? []) as Array<Record<string, unknown>>
+    if (!topAliases.some((a: Record<string, unknown>) => a.find === alias.find)) {
+      rawConfig.resolve = {
+        ...(rawConfig.resolve as Record<string, unknown>),
+        alias: [...topAliases, { find: alias.find, replacement: alias.replacement }],
+      }
+    }
+
+    // Per-environment resolve
+    for (const envName of alias.environments) {
+      const env = (environments[envName] ?? {}) as Record<string, unknown>
+      const envResolve = (env.resolve ?? {}) as Record<string, unknown>
+      const envAliases = (envResolve.alias ?? []) as Array<Record<string, unknown>>
+      if (!envAliases.some((a: Record<string, unknown>) => a.find === alias.find)) {
+        env.resolve = {
+          ...envResolve,
+          alias: [...envAliases, { find: alias.find, replacement: alias.replacement }],
+        }
       }
     }
   }
