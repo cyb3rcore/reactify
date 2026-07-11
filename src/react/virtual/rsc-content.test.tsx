@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
-import React, { Suspense } from 'react'
+import React from 'react'
 
 // Hoisted mock references for per-test control
 const { mockCreateFromFetch, mockSetServerCallback, mockConsumePrefetch, mockFetch } = vi.hoisted(() => ({
@@ -41,28 +41,19 @@ describe('RscSlot', () => {
     mockConsumePrefetch.mockReturnValue(undefined)
   })
 
-  it('renders content from resolved initialRscPromise', async () => {
+  it('renders content from resolved initialPayload', async () => {
     const [{ RouteProvider }, { default: RscSlot }] = await Promise.all([
       import('./core.js'),
       import('./rsc-content.js'),
     ])
-    const resolvedPromise = Promise.resolve({
+    const initialPayload = {
       matches: [{ element: React.createElement('div', { 'data-testid': 'initial' }, 'Initial') }],
-    })
-
-    // Make consumePrefetch return a cached promise matching expected content
-    // so the navigation effect preserves it
-    const cachedPromise = Promise.resolve({
-      matches: [{ element: React.createElement('div', { 'data-testid': 'initial' }, 'Initial') }],
-    })
-    mockConsumePrefetch.mockReturnValue(cachedPromise)
+    }
 
     await act(async () => {
       render(
         <RouteProvider routes={[{ path: '/', rsc: true }]} location="/">
-          <Suspense fallback={<div>loading</div>}>
-            <RscSlot initialRscPromise={resolvedPromise} />
-          </Suspense>
+          <RscSlot initialPayload={initialPayload} />
         </RouteProvider>,
       )
     })
@@ -75,31 +66,30 @@ describe('RscSlot', () => {
     const [{ RouteProvider, useNavigate }, { default: RscSlot }] = await Promise.all([
       import('./core.js'),
       import('./rsc-content.js'),
-    ])
-
-    const initialPromise = Promise.resolve({ matches: [{ element: React.createElement('div', null, 'Initial') }] })
+    ]) as [typeof import('./core.js'), { default: React.ComponentType<{ initialPayload?: unknown }> }]
 
     // Ensure no cache hit (default mock already returns undefined)
     mockConsumePrefetch.mockReturnValue(undefined)
+    mockCreateFromFetch.mockReturnValue(
+      Promise.resolve({ matches: [{ element: React.createElement('div', null, 'Other') }] }),
+    )
 
-    let navigate: ReturnType<typeof useNavigate>
+    let navigate: (to: string | number) => void
     function NavCapture() {
-      navigate = useNavigate()
+      navigate = useNavigate() as (to: string | number) => void
       return null
     }
 
     await act(async () => {
       render(
         <RouteProvider routes={[{ path: '[...path]', rsc: true }]} location="/">
-          <Suspense fallback={null}>
-            <RscSlot initialRscPromise={initialPromise} />
-            <NavCapture />
-          </Suspense>
+          <RscSlot initialPayload={{ matches: [{ element: React.createElement('div', null, 'Initial') }] }} />
+          <NavCapture />
         </RouteProvider>,
       )
     })
 
-    // Navigation effect should NOT fire on first mount when initialRscPromise is provided
+    // Navigation effect should NOT fire on first mount when initialPayload is provided
     expect(mockCreateFromFetch).not.toHaveBeenCalled()
 
     // Navigate — triggers navigation effect
@@ -116,14 +106,11 @@ describe('RscSlot', () => {
       import('./core.js'),
       import('./rsc-content.js'),
     ])
-    const resolvedPromise = Promise.resolve({ matches: [] })
 
     await act(async () => {
       render(
         <RouteProvider routes={[{ path: '/', rsc: true }]} location="/">
-          <Suspense fallback={null}>
-            <RscSlot initialRscPromise={resolvedPromise} />
-          </Suspense>
+          <RscSlot />
         </RouteProvider>,
       )
     })
@@ -136,28 +123,18 @@ describe('RscSlot', () => {
       import('./core.js'),
       import('./rsc-content.js'),
     ])
-    const resolvedPromise = Promise.resolve({
-      matches: [{ element: React.createElement('div', null, 'Hello') }],
-      head: { title: 'Page Title' },
-    })
-
-    // Make consumePrefetch return a cached promise with matching head
-    const cachedPromise = Promise.resolve({
-      matches: [{ element: React.createElement('div', null, 'Hello') }],
-      head: { title: 'Page Title' },
-    })
-    mockConsumePrefetch.mockReturnValue(cachedPromise)
 
     await act(async () => {
       render(
         <RouteProvider routes={[{ path: '/', rsc: true }]} location="/">
-          <Suspense fallback={null}>
-            <RscSlot initialRscPromise={resolvedPromise} />
-          </Suspense>
+          <RscSlot initialPayload={{
+            matches: [{ element: React.createElement('div', null, 'Hello') }],
+            head: { title: 'Page Title' },
+          }} />
         </RouteProvider>,
       )
     })
-    // Effects run after the act scope — title update is committed
+
     expect(document.title).toBe('Page Title')
   })
 })

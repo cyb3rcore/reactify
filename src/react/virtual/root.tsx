@@ -1,19 +1,14 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { useRouteContext } from './core.js'
+import RscSlot from './rsc-content.js'
 import type { RscPayload } from './rsc-content.js'
-
-// Lazy import RscSlot so server components that import server-only modules
-// (e.g. @cyb3rcore/reactify/server with node:async_hooks) are never loaded in
-// the browser. RscSlot fetches the RSC flight payload from the server,
-// avoiding client-side evaluation of server component code.
-const RscSlot = lazy(() => import('./rsc-content.js'))
 
 interface RouteRendererProps {
   notFound?: React.ComponentType
-  initialRscPromise?: Promise<RscPayload>
+  initialPayload?: RscPayload | null
 }
 
-export function RouteRenderer({ notFound: NotFound, initialRscPromise }: RouteRendererProps) {
+export function RouteRenderer({ notFound: NotFound, initialPayload }: RouteRendererProps) {
   const { match, params, route: routeData } = useRouteContext()
 
   if (!match) {
@@ -21,17 +16,13 @@ export function RouteRenderer({ notFound: NotFound, initialRscPromise }: RouteRe
     return null
   }
 
-  // RSC routes: render via RscSlot which uses the initialRscPromise from SSR
-  // (from createFromReadableStream) for hydration, then fetches fresh RSC
-  // payloads on SPA navigation via the _.rsc endpoint. Server component code
-  // (with server-only imports) is never loaded in the browser — the flight
-  // data delivers the rendered element tree.
+  // RSC routes: render via RscSlot which receives the SSR-resolved payload
+  // (initialPayload) for hydration, then fetches fresh RSC payloads on SPA
+  // navigation via the _.rsc endpoint. Server component code (with server-only
+  // imports) is never loaded in the browser — the flight data delivers the
+  // rendered element tree.
   if (match.rsc) {
-    return (
-      <Suspense fallback={null}>
-        <RscSlot initialRscPromise={initialRscPromise} />
-      </Suspense>
-    )
+    return <RscSlot initialPayload={initialPayload} />
   }
 
   const Component = match.component
