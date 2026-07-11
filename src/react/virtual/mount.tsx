@@ -176,7 +176,8 @@ export function mount(routes: RouteDef[], rootId = 'root') {
 // The HTML loads this file via <script type="module" src="$app/mount.js">,
 // and ESM top-level execution bootstraps the app. Projects that provide
 // their own mount.tsx override this virtual module entirely.
-async function bootstrap() {
+
+function bootstrap() {
   if (typeof window === 'undefined') return
   if (window.__FLIGHT_DATA) {
     // RSC path: routes not needed — mount() detects __FLIGHT_DATA and
@@ -185,8 +186,12 @@ async function bootstrap() {
     mount([], 'root')
     return
   }
-  // Non-RSC path: resolve routes from the glob manifest + SSR metadata
-  const resolvedRoutes = await hydrateRoutes(routesGlob)
+  // Non-RSC path: hydrateRoutes is synchronous (reads window.routes and
+  // wraps loaders in React.lazy — no dynamic import is called here).
+  // Calling it synchronously before mount() eliminates the async gap where
+  // clicks on <a> tags would otherwise cause full page reloads before the
+  // RouteProvider's useEffect click handler is registered.
+  const resolvedRoutes = hydrateRoutes(routesGlob)
   mount(resolvedRoutes, 'root')
 }
 bootstrap()
