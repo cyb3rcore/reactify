@@ -72,7 +72,7 @@ describe('RscSlot', () => {
   })
 
   it('fetches on navigation when no cache hit', async () => {
-    const [{ RouteProvider }, { default: RscSlot }] = await Promise.all([
+    const [{ RouteProvider, useNavigate }, { default: RscSlot }] = await Promise.all([
       import('./core.js'),
       import('./rsc-content.js'),
     ])
@@ -82,18 +82,33 @@ describe('RscSlot', () => {
     // Ensure no cache hit (default mock already returns undefined)
     mockConsumePrefetch.mockReturnValue(undefined)
 
+    let navigate: ReturnType<typeof useNavigate>
+    function NavCapture() {
+      navigate = useNavigate()
+      return null
+    }
+
     await act(async () => {
       render(
-        <RouteProvider routes={[{ path: '/', rsc: true }]} location="/">
+        <RouteProvider routes={[{ path: '[...path]', rsc: true }]} location="/">
           <Suspense fallback={null}>
             <RscSlot initialRscPromise={initialPromise} />
+            <NavCapture />
           </Suspense>
         </RouteProvider>,
       )
     })
 
-    // Navigation effect should have called createFromFetch since no cache hit
-    expect(mockCreateFromFetch).toHaveBeenCalled()
+    // Navigation effect should NOT fire on first mount when initialRscPromise is provided
+    expect(mockCreateFromFetch).not.toHaveBeenCalled()
+
+    // Navigate — triggers navigation effect
+    mockConsumePrefetch.mockReturnValue(undefined)
+    await act(async () => {
+      navigate('/other')
+    })
+
+    expect(mockCreateFromFetch).toHaveBeenCalledTimes(1)
   })
 
   it('registers setServerCallback on mount', async () => {
