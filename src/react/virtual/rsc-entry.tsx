@@ -16,6 +16,7 @@ import {
   decodeFormState,
 } from '@vitejs/plugin-rsc/rsc'
 import { createElement, type ComponentType, type ReactNode } from 'react'
+import type { RouteDef } from './core.js'
 import { matchRoute } from '../router.js'
 import { getContext, setSyncContext } from '../rsc-context.js'
 import { filePathToRoutePath } from '../route-utils.js'
@@ -302,6 +303,7 @@ async function handler(request: Request): Promise<Response> {
   let rscResponse: Response
   try {
     const routes = buildRouteConfig()
+    const routeDefs: RouteDef[] = routes.map((r) => ({ id: r.id, path: r.path, rsc: true }))
     const url = new URL(request.url)
     const matchResult = matchRoute(routes, url.pathname)
 
@@ -415,9 +417,9 @@ async function handler(request: Request): Promise<Response> {
 
     // Delegate to SSR environment for full document (HTML) requests
     const ssrEntry = await import.meta.viteRsc.import<{
-      generateHTML: (request: Request, rscResponse: Response) => Promise<Response>
+      generateHTML: (request: Request, rscResponse: Response, routes: RouteDef[]) => Promise<Response>
     }>('./ssr-entry.js', { environment: 'ssr' })
-    const htmlResult = await ssrEntry.generateHTML(request, rscResponse.clone())
+    const htmlResult = await ssrEntry.generateHTML(request, rscResponse.clone(), routeDefs)
 
     // Defensive guard: catch empty-body responses early
     if (!htmlResult.body) {

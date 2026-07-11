@@ -14,14 +14,10 @@ import { renderToReadableStream } from 'react-dom/server'
 import { createHead, transformHtmlTemplate } from '@unhead/react/server'
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ReactNode } from 'react'
-
-interface RscPayload {
-  matches?: Array<{ element?: ReactNode }>
-  head?: unknown
-  formState?: unknown
-  returnValue?: { ok?: boolean; data?: unknown }
-}
+import { createElement } from 'react'
+import { RouteProvider, type RouteDef } from './core.js'
+import { RouteRenderer } from './root.js'
+import type { RscPayload } from './rsc-content.js'
 
 /**
  * Load the index.html template for the HTML document shell.
@@ -116,7 +112,7 @@ async function readRSCPayload(rscBody: ReadableStream<Uint8Array>): Promise<stri
  * @param serverResponse - The RSC flight response from rsc-entry's handler
  * @returns A streaming HTML Response
  */
-export async function generateHTML(request: Request, serverResponse: Response): Promise<Response> {
+export async function generateHTML(request: Request, serverResponse: Response, routes: RouteDef[]): Promise<Response> {
   // Handle redirects — pass through if the RSC response is a redirect
   if (serverResponse.status >= 300 && serverResponse.status < 400) {
     return serverResponse
@@ -138,9 +134,9 @@ export async function generateHTML(request: Request, serverResponse: Response): 
 
   const bootstrapScriptContent = await import.meta.viteRsc.loadBootstrapScriptContent('index')
 
-  // Read the RSC payload and extract the matched route element
+  // Read the RSC payload for the SSR render
   const rscPayload = await createFromReadableStream<RscPayload>(serverResponse.body!)
-  const element = rscPayload?.matches?.[0]?.element ?? null
+  const resolvedPromise = Promise.resolve(rscPayload)
 
   // Create unhead instance and push head metadata from getMeta
   const head = createHead()
@@ -148,12 +144,18 @@ export async function generateHTML(request: Request, serverResponse: Response): 
     head.push(rscPayload.head)
   }
 
-  // Render the matched element to a readable stream (React SSR)
-  const htmlStream = await renderToReadableStream(<>{element}</>, {
-    bootstrapScriptContent,
-    formState: rscPayload?.formState as import('react-dom/client').ReactFormState | undefined,
-    signal: request.signal,
-  })
+  // Render the matched element, wrapped in RouteProvider + RouteRenderer for SSR
+  const htmlStream = await renderToReadableStream(
+    createElement(RouteProvider, {
+      routes,
+      location: request.url,
+      children: createElement(RouteRenderer, { initialRscPromise: resolvedPromise }),
+    }),
+    {
+      bootstrapScriptContent,
+      formState: rscPayload?.formState as import('react-dom/client').ReactFormState | undefined,
+      signal: request.signal,
+    })
 
   const decoder = new TextDecoder()
   const encoder = new TextEncoder()
