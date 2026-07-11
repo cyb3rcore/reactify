@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useRef,
   type ReactNode,
@@ -153,8 +154,11 @@ export function RouteProvider({
     return () => window.removeEventListener('popstate', onPop)
   }, [routes])
 
-  // Client-side: delegated link interception for SPA navigation
-  useEffect(() => {
+  // Client-side: delegated link interception for SPA navigation.
+  // Must use useLayoutEffect so the handler is registered before the browser
+  // paints — useEffect fires after paint, creating a race window where clicks
+  // are not intercepted and cause full page reloads.
+  useLayoutEffect(() => {
     const handler = (e: MouseEvent) => {
       if (!(e.target instanceof HTMLElement)) return
       const link = e.target.closest('a[href]')

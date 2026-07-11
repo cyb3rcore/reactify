@@ -153,7 +153,7 @@ describe('createHtmlFunction', () => {
     const app = createElement('div', null, 'hello')
     const head = createHead()
     const routesWithToJSON = Object.assign([{ path: '/' }], {
-      toJSON: () => [{ path: '/', id: undefined, name: undefined, layout: false, hasLayout: false, getData: false, getMeta: false, onEnter: false }],
+      toJSON: () => [{ path: '/', id: undefined, name: undefined, layout: false, hasLayout: false, getData: false, getMeta: false, onEnter: false, rsc: false }],
     })
     const mockThis = {
       render: vi.fn().mockResolvedValue({
