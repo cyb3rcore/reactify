@@ -1,5 +1,49 @@
 # @cyb3rcore/reactify
 
+## 1.0.0
+
+### Major Changes
+
+- feat: unified RSC hydration — single shell, smooth SPA navigation for all routes
+
+  **BREAKING**: This rewrites the client hydration architecture. The two separate
+  hydration paths (hydrateRsc for RSC pages, hydrateRoot for non-RSC) are replaced
+  with a single unified RouteProvider shell that handles all page types.
+
+  ## What changed
+
+  - **Unified bootstrap** — `mount.tsx` always calls `hydrateRoot(RouteProvider)`.
+    The `__FLIGHT_DATA` bifurcation and `hydrateRsc()` function are removed.
+
+  - **SSR wraps in RouteProvider** — `ssr-entry.tsx` wraps the RSC element in
+    `RouteProvider + RouteRenderer` so the server-rendered DOM tree matches the
+    client hydration tree exactly.
+
+  - **RscSlot replaces RscRoot + RscContent** — A single component reads the
+    initial RSC element from the decoded `__FLIGHT_DATA` (passed as a prop via
+    `use()` + Suspense) and fetches fresh `_.rsc` flight data on navigation.
+
+  - **No more RSC-skip guards** — The click handler, `navigate()`, popstate
+    handler, and data-loading effect in `core.tsx` no longer check `match.rsc`.
+    All routes navigate via SPA, including RSC-to-RSC and cross-type transitions.
+
+  - **Link component** — New `<Link>` with hover prefetch and TTL cache
+    (`prefetch-cache.ts`). Prefetched RSC payloads are decoded and cached,
+    making hover-to-click navigation instant.
+
+  - **startTransition on all navigations** — URL updates and content swaps use
+    `startTransition`, keeping the current page visible until the new content
+    is ready.
+
+  ## Migration notes
+
+  - Consumers using `$app/rsc-content.js` directly can continue to do so; the
+    `useServerAction` hook export is preserved.
+  - The `Link` component is optional — plain `<a>` tags still work (they trigger
+    SPA navigation through the unified click handler).
+  - If custom code checks `window.__FLIGHT_DATA` or calls `hydrateRsc()`:
+    these are removed. There is one hydration path.
+
 ## 0.1.4
 
 ### Patch Changes
