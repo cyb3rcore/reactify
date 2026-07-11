@@ -21,11 +21,11 @@ export function RouteRenderer({ notFound: NotFound, initialRscPromise }: RouteRe
     return null
   }
 
-  // RSC routes: render via RscSlot which fetches the RSC payload from the
-  // server. Server component code (with server-only imports) is never loaded
-  // in the browser — the flight data delivers the rendered element tree.
-  // This path is a safety net (popstate, navigate API) — normal link clicks
-  // to RSC routes trigger full page navigation for SSR.
+  // RSC routes: render via RscSlot which uses the initialRscPromise from SSR
+  // (from createFromReadableStream) for hydration, then fetches fresh RSC
+  // payloads on SPA navigation via the _.rsc endpoint. Server component code
+  // (with server-only imports) is never loaded in the browser — the flight
+  // data delivers the rendered element tree.
   if (match.rsc) {
     return (
       <Suspense fallback={null}>
