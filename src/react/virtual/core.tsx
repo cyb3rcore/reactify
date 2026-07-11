@@ -163,6 +163,8 @@ export function RouteProvider({
   // are not intercepted and cause full page reloads.
   useIsomorphicLayoutEffect(() => {
     const handler = (e: MouseEvent) => {
+      // Let <Link> component handle its own navigation — skip if already handled
+      if (e.defaultPrevented) return
       if (!(e.target instanceof HTMLElement)) return
       const link = e.target.closest('a[href]')
       if (!(link instanceof HTMLAnchorElement)) return
