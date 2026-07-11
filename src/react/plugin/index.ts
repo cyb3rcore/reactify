@@ -27,6 +27,36 @@ try {
   // Not available — will be handled by fallback resolution
 }
 
+// Detect the reactify package name(s) so the plugin can exclude them from
+// the client's dep optimizer. When the server-only subpath (@cyb3rcore
+// /reactify/server with node:async_hooks) is imported from an RSC page
+// component, Vite's optimizer pre-bundles the package and strips the
+// try/catch guard around new AsyncLocalStorage() in rsc-context.ts,
+// causing "AsyncLocalStorage is not a constructor" in the browser.
+const reactifyPkgExcludes: string[] = []
+// Collect the real package name via package.json
+try {
+  // The plugin is at src/react/plugin/index.ts; the package root is 3 levels up
+  const pkgJson = resolve(import.meta.dirname, '..', '..', '..', 'package.json')
+  const pkg = JSON.parse(readFileSync(pkgJson, 'utf8'))
+  if (pkg.name) reactifyPkgExcludes.push(pkg.name)
+} catch {
+  // Fallback: use the known published name
+  reactifyPkgExcludes.push('@cyb3rcore/reactify')
+}
+// Also detect local aliases (e.g. 'reactify' used in e2e fixtures) by
+// checking if they resolve to the same location as this plugin
+try {
+  const reactifyRoot = resolve(import.meta.dirname, '..', '..', '..')
+  for (const alias of ['reactify']) {
+    try {
+      if (rscRequire && rscRequire.resolve(alias + '/package.json') === resolve(reactifyRoot, 'package.json')) {
+        reactifyPkgExcludes.push(alias)
+      }
+    } catch { /* not this alias */ }
+  }
+} catch { /* skip alias detection */ }
+
 // Resolve #runtime alias path used by virtual modules (e.g. #runtime/route-utils.js)
 // Same as in the config hook's runtimeAlias definition.
 const runtimeAliasPath = resolve(import.meta.dirname, '..')
@@ -332,10 +362,21 @@ function config(
       }
     }
     // Prevent Rolldown scanner from trying to pre-bundle $app/ virtual modules
+    // and the reactify package itself. The optimizer strips the try/catch guard
+    // around new AsyncLocalStorage() in rsc-context.ts during pre-bundling,
+    // causing "AsyncLocalStorage is not a constructor" in the browser when
+    // server-only modules (@cyb3rcore/reactify/server) are loaded.
     const clientOptimizeDeps = (clientEnv.optimizeDeps ?? {}) as Record<string, unknown>
     const existingExclude = (clientOptimizeDeps.exclude as string[]) ?? []
-    if (!existingExclude.includes('$app/*')) {
-      clientOptimizeDeps.exclude = [...existingExclude, '$app/*']
+    const newExcludes: string[] = [...existingExclude]
+    if (!existingExclude.includes('$app/*')) newExcludes.push('$app/*')
+    for (const pkgName of reactifyPkgExcludes) {
+      if (!existingExclude.some(e => e === pkgName || e.startsWith(pkgName + '/'))) {
+        newExcludes.push(pkgName)
+      }
+    }
+    if (newExcludes.length > existingExclude.length) {
+      clientOptimizeDeps.exclude = newExcludes
       clientEnv.optimizeDeps = clientOptimizeDeps
     }
     // Also set at the top level for Vite's optimizer

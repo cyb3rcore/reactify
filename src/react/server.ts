@@ -46,6 +46,7 @@ export class Routes extends Array<RouteRecord> {
       getData: !!route.getData,
       getMeta: !!route.getMeta,
       onEnter: !!route.onEnter,
+      rsc: !!route.rsc,
     }))
   }
 }

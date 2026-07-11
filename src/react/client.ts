@@ -50,15 +50,22 @@ export function hydrateRoutes(
     loaders = fromInput
   }
   return (window.routes ?? []).map((entry) => {
-    const key = String(entry.id ?? entry.path ?? '')
-    const loader = memoImport<{ default: ComponentType<unknown> }>(
-      loaders[key] as () => Promise<{ default: ComponentType<unknown> }>,
-    )
     // Don't spread layout from serialized metadata — Routes.toJSON() turns
     // layout into a boolean (!!layout), which when spread would override the
     // real layout component with false (causing "Element type is invalid" in
     // RouteRenderer). Keep getData/getMeta/onEnter booleans for navigation.
     const { layout: _l, ...clean } = entry
+    // RSC routes: skip lazy component creation. Server components can import
+    // server-only modules (like @cyb3rcore/reactify/server with node:async_hooks)
+    // that would crash if loaded in the browser. RouteRenderer handles RSC routes
+    // by rendering the RscContent component which fetches the RSC flight payload.
+    if (entry.rsc) {
+      return clean as unknown as RouteDef
+    }
+    const key = String(entry.id ?? entry.path ?? '')
+    const loader = memoImport<{ default: ComponentType<unknown> }>(
+      loaders[key] as () => Promise<{ default: ComponentType<unknown> }>,
+    )
     return {
       ...clean,
       loader,

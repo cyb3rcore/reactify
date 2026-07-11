@@ -1,5 +1,30 @@
 # @cyb3rcore/reactify
 
+## 0.1.4
+
+### Patch Changes
+
+- fix: prevent RSC server-only modules from crashing client bundle
+
+  Three coordinated changes:
+
+  - Added `rsc` flag to `Routes.toJSON()` so the client knows which
+    routes are RSC and must not load their page module client-side
+  - RouteRenderer renders `RscContent` (flight payload fetcher) for RSC
+    routes instead of lazy-loading the page component which may import
+    server-only modules like `@cyb3rcore/reactify/server` (node:async_hooks)
+  - Excluded the reactify package from client dep optimization so the
+    try/catch guard around `new AsyncLocalStorage()` in rsc-context.ts
+    survives the bundler transform as defense-in-depth
+
+- fix: register SPA link click handler before paint with useLayoutEffect
+
+  The delegated click handler in RouteProvider was registered via useEffect,
+  which fires after the browser paints. This created a race window where
+  the first user click after page load bypassed the handler and triggered
+  a full page reload. Changed to useLayoutEffect so the handler is
+  registered synchronously before the first paint.
+
 ## 0.1.3
 
 ### Patch Changes
