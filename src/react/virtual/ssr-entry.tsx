@@ -146,11 +146,14 @@ export async function generateHTML(request: Request, serverResponse: Response, r
   }
 
   // Render the matched element, wrapped in RouteProvider + RouteRenderer for SSR
+  // Pass the RSC payload as initialPayload — the client receives this via
+  // __FLIGHT_DATA and uses it for hydration (not a promise-based approach
+  // that would cause Suspense remount loops).
   const htmlStream = await renderToReadableStream(
     createElement(RouteProvider, {
       routes,
       location: request.url,
-      children: createElement(RouteRenderer, { initialRscPromise: resolvedPromise }),
+      children: createElement(RouteRenderer, { initialPayload: rscPayload }),
     }),
     {
       bootstrapScriptContent,
