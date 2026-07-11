@@ -1,5 +1,4 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import Youch from 'youch'
 import type { ClientModule, ClientEntries } from '../vite/types/client.js'
 import type { RuntimeConfig } from '../vite/types/options.js'
 import type { RouteDefinition } from '../vite/types/route.js'
@@ -53,6 +52,10 @@ export async function prepareClient(
   return client
 }
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 export function createErrorHandler(
   _args: Record<string, unknown>,
   scope: FastifyInstance,
@@ -61,10 +64,23 @@ export function createErrorHandler(
   return async (error: Error, req: FastifyRequest, reply: FastifyReply) => {
     req.log.error(error)
     if (config.dev) {
-      const youch = new Youch(error, req.raw)
+      const message = error instanceof Error ? error.message : String(error)
+      const stack = error instanceof Error ? (error.stack ?? '') : ''
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>500 — ${escapeHtml(message)}</title>
+<style>
+body{font-family:ui-monospace,monospace;background:#0d1117;color:#e6edf3;padding:2rem;max-width:960px;margin:0 auto}
+h1{color:#f85149;font-size:1.5rem}
+.summary{margin:1rem 0;padding:1rem;background:#161b22;border-radius:6px}
+.stack{background:#161b22;border-radius:6px;overflow-x:auto;padding:1rem;font-size:.85rem;line-height:1.5}
+</style></head>
+<body><h1>500 — ${escapeHtml(error instanceof Error ? error.name : 'Error')}</h1>
+<div class="summary"><strong>${escapeHtml(message)}</strong></div>
+<pre class="stack">${escapeHtml(stack)}</pre></body></html>`
       reply.code(500)
       reply.type('text/html')
-      reply.send(await youch.toHTML())
+      reply.send(html)
       return reply
     }
     reply.code(500)
