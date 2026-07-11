@@ -1,5 +1,15 @@
 # @cyb3rcore/reactify
 
+## 1.0.5
+
+### Patch Changes
+
+- fix: add guard against rsc: true + getData() conflict
+
+  getRouteModuleExports now throws when a route module exports both rsc: true
+  and getData() — they are mutually exclusive since RSC routes use server
+  components for data fetching instead of the getData lifecycle hook.
+
 ## 1.0.4
 
 ### Patch Changes
