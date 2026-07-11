@@ -21,16 +21,19 @@ describe('Routes', () => {
       id: '/about', path: '/about', name: 'about',
       layout: false, hasLayout: false,
       getData: true, getMeta: false, onEnter: false,
+      rsc: false,
     })
     expect(json[1]).toEqual({
       id: '/users/[id]', path: '/users/[id]', name: 'user',
       layout: true, hasLayout: true,
       getData: false, getMeta: true, onEnter: false,
+      rsc: false,
     })
     expect(json[2]).toEqual({
       id: '/', path: '/', name: 'home',
       layout: false, hasLayout: false,
       getData: false, getMeta: false, onEnter: true,
+      rsc: false,
     })
   })
 
