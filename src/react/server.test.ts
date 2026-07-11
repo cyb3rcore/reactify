@@ -101,7 +101,7 @@ describe('getRouteModuleExports', () => {
       clientOnly: false,
       serverOnly: true,
       configure: () => {},
-      rsc: true,
+      rsc: false,
     }
     const result = getRouteModuleExports(mod as Record<string, unknown>)
     expect(result.component).toBe('ComponentFn')
@@ -113,7 +113,16 @@ describe('getRouteModuleExports', () => {
     expect(result.clientOnly).toBe(false)
     expect(result.serverOnly).toBe(true)
     expect(result.configure).toBe(mod.configure)
-    expect(result.rsc).toBe(true)
+    expect(result.rsc).toBe(false)
+  })
+
+  it('throws when both rsc: true and getData() are set', () => {
+    const mod = {
+      default: 'ComponentFn',
+      getData: async () => ({}),
+      rsc: true,
+    }
+    expect(() => getRouteModuleExports(mod as Record<string, unknown>)).toThrow('mutually exclusive')
   })
 
   it('handles modules with no lifecycle hooks', () => {
