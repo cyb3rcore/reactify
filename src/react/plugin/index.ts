@@ -50,12 +50,19 @@ try {
   const reactifyRoot = resolve(import.meta.dirname, '..', '..', '..')
   for (const alias of ['reactify']) {
     try {
-      if (rscRequire && rscRequire.resolve(alias + '/package.json') === resolve(reactifyRoot, 'package.json')) {
+      if (
+        rscRequire &&
+        rscRequire.resolve(alias + '/package.json') === resolve(reactifyRoot, 'package.json')
+      ) {
         reactifyPkgExcludes.push(alias)
       }
-    } catch { /* not this alias */ }
+    } catch {
+      /* not this alias */
+    }
   }
-} catch { /* skip alias detection */ }
+} catch {
+  /* skip alias detection */
+}
 
 // Resolve #runtime alias path used by virtual modules (e.g. #runtime/route-utils.js)
 // Same as in the config hook's runtimeAlias definition.
@@ -69,9 +76,7 @@ interface PluginContext {
   indexHtml?: string
 }
 
-export default function viteReactifyPlugin(
-  options: { ts?: boolean } = {},
-): Plugin[] {
+export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plugin[] {
   const context: PluginContext = {
     root: null,
     environment: { name: '', config: {} as ResolvedConfig },
@@ -117,7 +122,10 @@ export default function viteReactifyPlugin(
           // since es-module-lexer (used by rsc:scan-strip) can't parse JSX.
           // The normalized module ID uses .js extension (from normalizeVirtualModuleId),
           // so we check includes('\0$app/') directly rather than file extension.
-          if (id.includes('\0$app/') && (id.endsWith('.jsx') || id.endsWith('.tsx') || id.endsWith('.js'))) {
+          if (
+            id.includes('\0$app/') &&
+            (id.endsWith('.jsx') || id.endsWith('.tsx') || id.endsWith('.js'))
+          ) {
             return transformWithOxc(code, id, {
               jsx: { runtime: 'automatic', importSource: 'react' },
             })
@@ -227,11 +235,7 @@ async function load(
   }
 }
 
-function transformIndexHtml(
-  this: PluginContext,
-  _html: string,
-  ctx: { bundle?: unknown },
-): void {
+function transformIndexHtml(this: PluginContext, _html: string, ctx: { bundle?: unknown }): void {
   if (!ctx.bundle) return
   this.indexHtml = _html
   this.resolvedBundle = ctx.bundle
@@ -278,7 +282,10 @@ function config(
       outDir: `${outDir}/rsc`,
       rolldownOptions: undefined,
       rollupOptions: {
-        ...(((existingRsc.build as Record<string, unknown>)?.rollupOptions ?? {}) as Record<string, unknown>),
+        ...(((existingRsc.build as Record<string, unknown>)?.rollupOptions ?? {}) as Record<
+          string,
+          unknown
+        >),
         input: {
           'rsc-entry': `$app/rsc-entry.${entryExt}`,
         },
@@ -371,7 +378,7 @@ function config(
     const newExcludes: string[] = [...existingExclude]
     if (!existingExclude.includes('$app/*')) newExcludes.push('$app/*')
     for (const pkgName of reactifyPkgExcludes) {
-      if (!existingExclude.some(e => e === pkgName || e.startsWith(pkgName + '/'))) {
+      if (!existingExclude.some((e) => e === pkgName || e.startsWith(pkgName + '/'))) {
         newExcludes.push(pkgName)
       }
     }
@@ -380,7 +387,9 @@ function config(
       clientEnv.optimizeDeps = clientOptimizeDeps
     }
     // Also set at the top level for Vite's optimizer
-    const topAliases = ((rawConfig.resolve as Record<string, unknown>)?.alias ?? []) as Array<Record<string, unknown>>
+    const topAliases = ((rawConfig.resolve as Record<string, unknown>)?.alias ?? []) as Array<
+      Record<string, unknown>
+    >
     if (!topAliases.some((a) => a.find === '@vitejs/plugin-rsc')) {
       rawConfig.resolve = {
         ...(rawConfig.resolve as Record<string, unknown>),
@@ -401,7 +410,11 @@ function config(
 
 function onwarn(
   warning: { code?: string; message?: { includes?: (s: string) => boolean }; exporter?: string },
-  rollupWarn: (warning: { code?: string; message?: { includes?: (s: string) => boolean }; exporter?: string }) => void,
+  rollupWarn: (warning: {
+    code?: string
+    message?: { includes?: (s: string) => boolean }
+    exporter?: string
+  }) => void,
 ): void {
   if (
     !(

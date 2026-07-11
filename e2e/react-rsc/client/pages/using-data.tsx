@@ -10,7 +10,9 @@ export default async function UsingData() {
     <div>
       <h2>Data Fetching in RSC</h2>
       <ul>
-        {items.map((item) => <li key={item}>{item}</li>)}
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
       </ul>
     </div>
   )

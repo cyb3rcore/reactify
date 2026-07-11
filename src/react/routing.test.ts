@@ -16,8 +16,12 @@ describe('prepareClient', () => {
     const entries = {
       ssr: {
         context: Promise.resolve(contextValue) as unknown as Record<string, unknown>,
-        routes: Promise.resolve(routesValue) as unknown as Iterable<import('../vite/types/route.js').RouteDefinition>,
-        create: Promise.resolve({ default: createValue }) as unknown as (...args: never[]) => unknown,
+        routes: Promise.resolve(routesValue) as unknown as Iterable<
+          import('../vite/types/route.js').RouteDefinition
+        >,
+        create: Promise.resolve({ default: createValue }) as unknown as (
+          ...args: never[]
+        ) => unknown,
       },
       rsc: undefined,
     }

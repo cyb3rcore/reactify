@@ -11,28 +11,67 @@ describe('Routes', () => {
 
   it('toJSON serializes route metadata', () => {
     const routes = new Routes(
-      { id: '/about', path: '/about', name: 'about', getData: true, getMeta: false, onEnter: false, layout: undefined },
-      { id: '/users/[id]', path: '/users/[id]', name: 'user', getData: false, getMeta: true, onEnter: false, layout: 'auth' },
-      { id: '/', path: '/', name: 'home', getData: false, getMeta: false, onEnter: true, layout: undefined },
+      {
+        id: '/about',
+        path: '/about',
+        name: 'about',
+        getData: true,
+        getMeta: false,
+        onEnter: false,
+        layout: undefined,
+      },
+      {
+        id: '/users/[id]',
+        path: '/users/[id]',
+        name: 'user',
+        getData: false,
+        getMeta: true,
+        onEnter: false,
+        layout: 'auth',
+      },
+      {
+        id: '/',
+        path: '/',
+        name: 'home',
+        getData: false,
+        getMeta: false,
+        onEnter: true,
+        layout: undefined,
+      },
     )
     const json = routes.toJSON()
     expect(json).toHaveLength(3)
     expect(json[0]).toEqual({
-      id: '/about', path: '/about', name: 'about',
-      layout: false, hasLayout: false,
-      getData: true, getMeta: false, onEnter: false,
+      id: '/about',
+      path: '/about',
+      name: 'about',
+      layout: false,
+      hasLayout: false,
+      getData: true,
+      getMeta: false,
+      onEnter: false,
       rsc: false,
     })
     expect(json[1]).toEqual({
-      id: '/users/[id]', path: '/users/[id]', name: 'user',
-      layout: true, hasLayout: true,
-      getData: false, getMeta: true, onEnter: false,
+      id: '/users/[id]',
+      path: '/users/[id]',
+      name: 'user',
+      layout: true,
+      hasLayout: true,
+      getData: false,
+      getMeta: true,
+      onEnter: false,
       rsc: false,
     })
     expect(json[2]).toEqual({
-      id: '/', path: '/', name: 'home',
-      layout: false, hasLayout: false,
-      getData: false, getMeta: false, onEnter: true,
+      id: '/',
+      path: '/',
+      name: 'home',
+      layout: false,
+      hasLayout: false,
+      getData: false,
+      getMeta: false,
+      onEnter: true,
       rsc: false,
     })
   })

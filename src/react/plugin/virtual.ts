@@ -38,12 +38,20 @@ function buildVirtualModuleList(): string[] {
     try {
       const onDisk = readdirSync(virtualRoot, { withFileTypes: true })
       for (const entry of onDisk) {
-        if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.test.tsx') || entry.name.endsWith('.d.ts')) continue
+        if (
+          entry.name.endsWith('.test.ts') ||
+          entry.name.endsWith('.test.tsx') ||
+          entry.name.endsWith('.d.ts')
+        )
+          continue
         if (entry.isFile() && (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx'))) {
-          if (!known.includes(entry.name) && !known.includes(entry.name.replace(/\.(ts|tsx)$/, '') + '/')) {
+          if (
+            !known.includes(entry.name) &&
+            !known.includes(entry.name.replace(/\.(ts|tsx)$/, '') + '/')
+          ) {
             console.warn(
               `[vite-plugin-reactify] Virtual module "${entry.name}" exists on disk ` +
-              `but is not registered. Add it to the virtualModules array in virtual.ts.`,
+                `but is not registered. Add it to the virtualModules array in virtual.ts.`,
             )
           }
         }
@@ -82,7 +90,11 @@ export async function resolveId(
   // Resolve relative imports from virtual module contexts (e.g. $app/create.js
   // importing ./core). The relative import is resolved against the importer's
   // virtual directory and checked against known virtual modules or physical files.
-  if (importer && (importer.startsWith('/$app/') || importer.startsWith('\0$app/')) && (id.startsWith('./') || id.startsWith('../'))) {
+  if (
+    importer &&
+    (importer.startsWith('/$app/') || importer.startsWith('\0$app/')) &&
+    (id.startsWith('./') || id.startsWith('../'))
+  ) {
     // Strip \0 null byte prefix before using importer in URL construction
     const cleanImporter = importer.charCodeAt(0) === 0 ? importer.slice(1) : importer
     // Ensure leading / so the URL is constructed as http://localhost/$app/… not http://localhost$app/…
@@ -128,9 +140,7 @@ export async function resolveId(
   }
 }
 
-export function loadVirtualModule(
-  virtualInput: string,
-): { code: string; map: null } | undefined {
+export function loadVirtualModule(virtualInput: string): { code: string; map: null } | undefined {
   let virtual = virtualInput
   if (!virtualModules.includes(virtual)) {
     return

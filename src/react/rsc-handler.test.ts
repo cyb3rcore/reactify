@@ -34,7 +34,9 @@ describe('convertRequest', () => {
   })
 
   it('handles multipart/form-data body', async () => {
-    const buffer = Buffer.from('--boundary\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--boundary--')
+    const buffer = Buffer.from(
+      '--boundary\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--boundary--',
+    )
     const mockReq: Partial<FastifyRequest> = {
       url: '/action',
       method: 'POST',
@@ -73,7 +75,9 @@ describe('convertRequest', () => {
       protocol: 'http',
       hostname: 'localhost',
     }
-    const request = await convertRequest(mockReq as FastifyRequest & { route?: Record<string, unknown> })
+    const request = await convertRequest(
+      mockReq as FastifyRequest & { route?: Record<string, unknown> },
+    )
     expect((request as unknown as Record<string, unknown>).__valtioState).toBeNull()
     expect((request as unknown as Record<string, unknown>).__server).toBeNull()
   })

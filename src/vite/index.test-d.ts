@@ -1,5 +1,9 @@
 import type { Server } from 'node:http'
-import Fastify, { type FastifyPluginCallback, type FastifyRequest, type FastifyReply } from 'fastify'
+import Fastify, {
+  type FastifyPluginCallback,
+  type FastifyRequest,
+  type FastifyReply,
+} from 'fastify'
 import { describe, expectTypeOf, it } from 'vitest'
 import * as ReactifyViteAll from '../index.js'
 import ReactifyVite, { reactifyVite, type ReactifyViteOptions } from '../index.js'

@@ -17,12 +17,15 @@ function makeMockReply(): FastifyReply {
 describe('RouteContext', () => {
   describe('constructor', () => {
     it('sets default properties from route definition', () => {
-      const ctx = new RouteContext(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/test', streaming: true, clientOnly: false, serverOnly: true, getData: true, getMeta: false, onEnter: true },
-      )
+      const ctx = new RouteContext(makeMockServer(), makeMockReq(), makeMockReply(), {
+        path: '/test',
+        streaming: true,
+        clientOnly: false,
+        serverOnly: true,
+        getData: true,
+        getMeta: false,
+        onEnter: true,
+      })
       expect(ctx.server).toBeDefined()
       expect(ctx.req).toBeDefined()
       expect(ctx.reply).toBeDefined()
@@ -45,22 +48,15 @@ describe('RouteContext', () => {
 
     it('uses route.data when provided', () => {
       const routeData = { message: 'hello' }
-      const ctx = new RouteContext(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/', data: routeData },
-      )
+      const ctx = new RouteContext(makeMockServer(), makeMockReq(), makeMockReply(), {
+        path: '/',
+        data: routeData,
+      })
       expect(ctx.data).toBe(routeData)
     })
 
     it('sets default boolean flags to false when not provided', () => {
-      const ctx = new RouteContext(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/' },
-      )
+      const ctx = new RouteContext(makeMockServer(), makeMockReq(), makeMockReply(), { path: '/' })
       expect(ctx.getData).toBe(false)
       expect(ctx.getMeta).toBe(false)
       expect(ctx.onEnter).toBe(false)
@@ -72,12 +68,9 @@ describe('RouteContext', () => {
 
   describe('static create', () => {
     it('creates RouteContext with server, req, reply, route', async () => {
-      const ctx = await RouteContext.create(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/' },
-      )
+      const ctx = await RouteContext.create(makeMockServer(), makeMockReq(), makeMockReply(), {
+        path: '/',
+      })
       expect(ctx).toBeInstanceOf(RouteContext)
       expect(ctx.server).toBeDefined()
     })
@@ -106,24 +99,20 @@ describe('RouteContext', () => {
     })
 
     it('works without contextInit', async () => {
-      const ctx = await RouteContext.create(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/' },
-      )
+      const ctx = await RouteContext.create(makeMockServer(), makeMockReq(), makeMockReply(), {
+        path: '/',
+      })
       expect(ctx.state).toBeNull()
     })
   })
 
   describe('toJSON', () => {
     it('serializes route context state', () => {
-      const ctx = new RouteContext(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/', getData: true, clientOnly: true },
-      )
+      const ctx = new RouteContext(makeMockServer(), makeMockReq(), makeMockReply(), {
+        path: '/',
+        getData: true,
+        clientOnly: true,
+      })
       ctx.state = { user: 'admin' }
       ctx.data = { items: [] }
       ctx.head = { title: 'Test' }
@@ -155,45 +144,25 @@ describe('RouteContext', () => {
     it('adds properties to RouteContext prototype', () => {
       RouteContext.extend({ customMethod: 'hello' })
       extendedProps.add('customMethod')
-      const ctx = new RouteContext(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/' },
-      )
+      const ctx = new RouteContext(makeMockServer(), makeMockReq(), makeMockReply(), { path: '/' })
       expect((ctx as unknown as Record<string, unknown>).customMethod).toBe('hello')
     })
 
     it('skips "default" key when extending', () => {
       RouteContext.extend({ default: 'should-be-skipped', otherProp: 'kept' })
-      const ctx = new RouteContext(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/' },
-      )
+      const ctx = new RouteContext(makeMockServer(), makeMockReq(), makeMockReply(), { path: '/' })
       expect((ctx as unknown as Record<string, unknown>).otherProp).toBe('kept')
     })
 
     it('skips "data" and "state" keys', () => {
       RouteContext.extend({ data: 'forbidden', state: 'forbidden', allowed: 'ok' })
-      const ctx = new RouteContext(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/' },
-      )
+      const ctx = new RouteContext(makeMockServer(), makeMockReq(), makeMockReply(), { path: '/' })
       expect((ctx as unknown as Record<string, unknown>).allowed).toBe('ok')
     })
 
     it('extended properties are writable', () => {
       RouteContext.extend({ score: 0 })
-      const ctx = new RouteContext(
-        makeMockServer(),
-        makeMockReq(),
-        makeMockReply(),
-        { path: '/' },
-      )
+      const ctx = new RouteContext(makeMockServer(), makeMockReq(), makeMockReply(), { path: '/' })
       ;(ctx as unknown as Record<string, unknown>).score = 100
       expect((ctx as unknown as Record<string, unknown>).score).toBe(100)
     })

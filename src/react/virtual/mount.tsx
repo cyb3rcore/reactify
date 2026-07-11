@@ -42,8 +42,7 @@ if (typeof window !== 'undefined') {
  */
 async function hydrateRsc(targetElem: Element): Promise<void> {
   const { rscStream } = await import('rsc-html-stream/client')
-  const { createFromReadableStream, setServerCallback } =
-    await import('@vitejs/plugin-rsc/browser')
+  const { createFromReadableStream, setServerCallback } = await import('@vitejs/plugin-rsc/browser')
 
   // Set up __webpack_require__ polyfill for RSC vendor module loading.
   // The react-server-dom vendor file uses a __webpack_require__-based
@@ -100,8 +99,7 @@ async function hydrateRsc(targetElem: Element): Promise<void> {
     // for client-side navigations; for initial page hydration we
     // must register it here.
     useEffect(() => {
-      window.__rscSetPayload = (v: unknown) =>
-        startTransition(() => setPayload(v))
+      window.__rscSetPayload = (v: unknown) => startTransition(() => setPayload(v))
       setServerCallback(async (id: string, args: unknown[]) => {
         const { createTemporaryReferenceSet, encodeReply, createFromFetch } =
           await import('@vitejs/plugin-rsc/browser')
@@ -195,5 +193,3 @@ function bootstrap() {
   mount(resolvedRoutes, 'root')
 }
 bootstrap()
-
-

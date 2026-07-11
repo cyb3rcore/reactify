@@ -7,7 +7,10 @@ const cwd = import.meta.dirname
 describe('react-rsc', () => {
   it('build production RSC bundle', makeBuildTest({ cwd }))
 
-  it('RSC page has __FLIGHT_DATA in HTML', makeRscIndexTest({ main, dev: true, pageUrl: '/rsc-page' }))
+  it(
+    'RSC page has __FLIGHT_DATA in HTML',
+    makeRscIndexTest({ main, dev: true, pageUrl: '/rsc-page' }),
+  )
 
   it('renders RSC page in production mode', async () => {
     const server = await main()

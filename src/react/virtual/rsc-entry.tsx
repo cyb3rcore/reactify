@@ -135,10 +135,7 @@ function buildRouteConfig(): RouteConfigEntry[] {
  * route's page module. The route module can optionally export a `getMeta()`
  * function that returns head metadata.
  */
-async function extractHeadMeta(
-  routeId: string,
-  url: URL,
-): Promise<Record<string, unknown> | null> {
+async function extractHeadMeta(routeId: string, url: URL): Promise<Record<string, unknown> | null> {
   const loader = routesManifest[routeId]
   if (!loader) return null
   try {
@@ -247,10 +244,9 @@ async function handler(request: Request): Promise<Response> {
     if (renderRequest.actionId) {
       // Server action called via React Server Callback
       const contentType = request.headers.get('content-type')
-      const body =
-        contentType?.startsWith('multipart/form-data')
-          ? await request.formData()
-          : await request.text()
+      const body = contentType?.startsWith('multipart/form-data')
+        ? await request.formData()
+        : await request.text()
       temporaryReferences = createTemporaryReferenceSet()
       const args = await decodeReply(body, { temporaryReferences })
       const action = await loadServerAction(renderRequest.actionId)
@@ -359,18 +355,16 @@ async function handler(request: Request): Promise<Response> {
     // action. This ensures the RSC payload's element tree reflects the
     // updated state.
     if (renderRequest.isAction && returnValue?.ok) {
-      ; (globalThis as Record<string, unknown>).__rsc_formState = returnValue.data
-        ; (globalThis as Record<string, unknown>).__rsc_lastActionState = returnValue.data
+      ;(globalThis as Record<string, unknown>).__rsc_formState = returnValue.data
+      ;(globalThis as Record<string, unknown>).__rsc_lastActionState = returnValue.data
     } else if (formState !== undefined) {
-      ; (globalThis as Record<string, unknown>).__rsc_formState = formState
+      ;(globalThis as Record<string, unknown>).__rsc_formState = formState
     }
 
     // Create a React element from the route module's default export.
     // pageModule is narrowed to PageModule by the isPageModule guard above,
     // so default is already ComponentType<...> | undefined.
-    const element: ReactNode = pageModule.default
-      ? createElement(pageModule.default)
-      : null
+    const element: ReactNode = pageModule.default ? createElement(pageModule.default) : null
 
     // Do NOT clear __rsc_formState here — the element created above is a
     // React element (createElement does NOT invoke the component function).
@@ -402,13 +396,9 @@ async function handler(request: Request): Promise<Response> {
     if (valtioState && firstMatch?.element) {
       const { snapshot, getVersion } = await import('valtio')
       const stateSnapshot =
-        getVersion(valtioState) !== undefined
-          ? snapshot(valtioState)
-          : valtioState
+        getVersion(valtioState) !== undefined ? snapshot(valtioState) : valtioState
       rscPayload.matches![0]!.element = (
-        <ValtioHydrator state={stateSnapshot}>
-          {firstMatch.element}
-        </ValtioHydrator>
+        <ValtioHydrator state={stateSnapshot}>{firstMatch.element}</ValtioHydrator>
       )
     }
 
@@ -424,18 +414,15 @@ async function handler(request: Request): Promise<Response> {
     }
 
     // Delegate to SSR environment for full document (HTML) requests
-    const ssrEntry = await import.meta.viteRsc.import<{ generateHTML: (request: Request, rscResponse: Response) => Promise<Response> }>(
-      './ssr-entry.js',
-      { environment: 'ssr' },
-    )
+    const ssrEntry = await import.meta.viteRsc.import<{
+      generateHTML: (request: Request, rscResponse: Response) => Promise<Response>
+    }>('./ssr-entry.js', { environment: 'ssr' })
     const htmlResult = await ssrEntry.generateHTML(request, rscResponse.clone())
 
     // Defensive guard: catch empty-body responses early
     if (!htmlResult.body) {
       const body = await htmlResult.text()
-      throw new Error(
-        `RSC SSR response has no body (status ${htmlResult.status}): ${body}`,
-      )
+      throw new Error(`RSC SSR response has no body (status ${htmlResult.status}): ${body}`)
     }
 
     return htmlResult
@@ -466,10 +453,7 @@ async function handler(request: Request): Promise<Response> {
         headers: { 'Content-Type': 'text/html' },
       })
     } catch {
-      const errorText =
-        error instanceof Error
-          ? error.message
-          : String(error) || 'Unknown error'
+      const errorText = error instanceof Error ? error.message : String(error) || 'Unknown error'
       return new Response(
         `<html><body><h1>500 — Internal Server Error</h1><pre>${errorText}</pre></body></html>`,
         {

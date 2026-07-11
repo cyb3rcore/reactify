@@ -4,7 +4,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Readable } from 'node:stream'
 import { createElement } from 'react'
 import { createHead } from '@unhead/react/server'
-import { onShellReady, onAllReady, createRenderFunction, renderSSR, createHtmlFunction, sendClientOnlyShell, streamShell } from './rendering.js'
+import {
+  onShellReady,
+  onAllReady,
+  createRenderFunction,
+  renderSSR,
+  createHtmlFunction,
+  sendClientOnlyShell,
+  streamShell,
+} from './rendering.js'
 import type { FastifyInstance, FastifyReply } from 'fastify'
 
 // ---- Section: onShellReady ----
@@ -141,19 +149,39 @@ describe('createHtmlFunction', () => {
   // When creating an HTML function from a source template, expect it to be callable
   it('returns a function', async () => {
     const source = '<html><head></head><body><div id="root"><!-- element --></div></body></html>'
-    const fn = await createHtmlFunction(source, {} as FastifyInstance, {} as Record<string, unknown>)
+    const fn = await createHtmlFunction(
+      source,
+      {} as FastifyInstance,
+      {} as Record<string, unknown>,
+    )
     expect(typeof fn).toBe('function')
   })
 
   // When the HTML function is invoked, expect this.render() to be called
   it('calls this.render() when invoked', async () => {
     const source = '<html><head></head><body><div id="root"><!-- element --></div></body></html>'
-    const fn = await createHtmlFunction(source, {} as FastifyInstance, {} as Record<string, unknown>)
+    const fn = await createHtmlFunction(
+      source,
+      {} as FastifyInstance,
+      {} as Record<string, unknown>,
+    )
 
     const app = createElement('div', null, 'hello')
     const head = createHead()
     const routesWithToJSON = Object.assign([{ path: '/' }], {
-      toJSON: () => [{ path: '/', id: undefined, name: undefined, layout: false, hasLayout: false, getData: false, getMeta: false, onEnter: false, rsc: false }],
+      toJSON: () => [
+        {
+          path: '/',
+          id: undefined,
+          name: undefined,
+          layout: false,
+          hasLayout: false,
+          getData: false,
+          getMeta: false,
+          onEnter: false,
+          rsc: false,
+        },
+      ],
     })
     const mockThis = {
       render: vi.fn().mockResolvedValue({

@@ -4,5 +4,9 @@ export const rsc = true
 
 export default function WithServer() {
   const server = getServer()
-  return <p>server available: <span>{String(!!server)}</span></p>
+  return (
+    <p>
+      server available: <span>{String(!!server)}</span>
+    </p>
+  )
 }

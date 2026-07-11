@@ -1,6 +1,14 @@
 'use client'
 
-import { useState, useEffect, Component, startTransition, useRef, useCallback, type ReactNode } from 'react'
+import {
+  useState,
+  useEffect,
+  Component,
+  startTransition,
+  useRef,
+  useCallback,
+  type ReactNode,
+} from 'react'
 import { useRouteContext } from './core.js'
 
 interface RscPayload {

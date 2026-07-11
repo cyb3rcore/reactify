@@ -33,7 +33,7 @@ export function resolve(specifier, context, nextResolve) {
       shortCircuit: true,
     }
   }
-  
+
   // Mock all @vitejs/plugin-rsc bare specifier imports
   if (specifier.startsWith('@vitejs/plugin-rsc')) {
     const name = specifier.replace('@vitejs/plugin-rsc/', '').replace(/[^a-z0-9]/gi, '-')
@@ -42,7 +42,7 @@ export function resolve(specifier, context, nextResolve) {
       shortCircuit: true,
     }
   }
-  
+
   return nextResolve(specifier, context)
 }
 
@@ -56,11 +56,11 @@ export function load(url, context, nextLoad) {
       shortCircuit: true,
     }
   }
-  
+
   if (url.startsWith('file:///virtual-mock/')) {
     const path = url.replace('file:///virtual-mock/', '').replace('.js', '')
     const decoded = decodeURIComponent(path)
-    
+
     // Handle @vitejs/plugin-rsc subpath mocks
     if (path.startsWith('rsc-')) {
       return {
@@ -69,7 +69,7 @@ export function load(url, context, nextLoad) {
         shortCircuit: true,
       }
     }
-    
+
     // Handle virtual: protocol mocks
     const code = mockModules[decoded] || 'export default {}'
     return {
@@ -78,6 +78,6 @@ export function load(url, context, nextLoad) {
       shortCircuit: true,
     }
   }
-  
+
   return nextLoad(url, context)
 }
