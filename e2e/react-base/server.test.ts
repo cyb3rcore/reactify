@@ -98,6 +98,4 @@ describe('react-base', () => {
       await server.close()
     }
   })
-
-
 })

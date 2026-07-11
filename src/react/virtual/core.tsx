@@ -197,7 +197,7 @@ export function RouteProvider({
       const result = matchRoute(routes, loc.pathname)
       setMatch(result ?? { route: null, params: {} })
     },
-    [routes]
+    [routes],
   )
 
   const ctx: RouteContextValue = {

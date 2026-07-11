@@ -1,8 +1,7 @@
 import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
-const resolveMock = (name: string) =>
-  resolve(__dirname, 'src/__mocks__', name)
+const resolveMock = (name: string) => resolve(__dirname, 'src/__mocks__', name)
 
 export default defineConfig({
   test: {

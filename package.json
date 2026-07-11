@@ -1,10 +1,12 @@
 {
   "name": "@cyb3rcore/reactify",
   "version": "0.1.4",
-  "license": "MIT",
   "description": "React SSR + RSC for Fastify — React Server Components and SSR on Fastify + Vite, with file-system routing, server actions, streaming, and Valtio integration",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
   "type": "module",
-  "packageManager": "pnpm@10.33.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -33,9 +35,6 @@
       "import": "./dist/react/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -70,6 +69,7 @@
     "youch": "^3.3.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/fs-extra": "^11.0.4",
@@ -83,11 +83,11 @@
     "oxlint": "^1.73.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
-    "vitest": "^4.1.9",
-    "@playwright/test": "^1.61.0"
+    "vitest": "^4.1.9"
   },
   "peerDependencies": {
     "fastify": ">=5",
     "vite": ">=6"
-  }
+  },
+  "packageManager": "pnpm@10.33.0"
 }

@@ -133,7 +133,7 @@ export async function createHtmlFunction(
 
   // Registered as reply.html()
   return async function (this: FastifyReply) {
-    const result = await this.render() as unknown as RenderResult
+    const result = (await this.render()) as unknown as RenderResult
     const { routes, context, body } = result
 
     const useHead = context.useHead as Parameters<typeof transformHtmlTemplate>[0]
@@ -154,9 +154,7 @@ export async function createHtmlFunction(
       devalue.uneval((context as { toJSON(): Record<string, unknown> }).toJSON())
     }\nwindow.routes = ${
       // Universal router payload
-      devalue.uneval(
-        (routes as unknown as { toJSON(): Record<string, unknown> }).toJSON(),
-      )
+      devalue.uneval((routes as unknown as { toJSON(): Record<string, unknown> }).toJSON())
     }\n</script>`
 
     // In all other cases use universal,
@@ -192,10 +190,7 @@ async function* createShellStream(
   body: Readable | Error | undefined,
 ): AsyncGenerator<string> {
   const transformHead = (str: string) =>
-    transformHtmlTemplate(
-      context.useHead as Parameters<typeof transformHtmlTemplate>[0],
-      str,
-    )
+    transformHtmlTemplate(context.useHead as Parameters<typeof transformHtmlTemplate>[0], str)
 
   yield transformHead(templates.beforeElement(context))
 

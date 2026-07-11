@@ -7,10 +7,7 @@ interface ImportMeta {
   glob(pattern: string): Record<string, () => Promise<unknown>>
   globEager(pattern: string): Record<string, unknown>
   readonly viteRsc: {
-    import: <T>(
-      specifier: string,
-      options: { environment: string },
-    ) => Promise<T>
+    import: <T>(specifier: string, options: { environment: string }) => Promise<T>
     loadModule: <T>(environmentName: string, entryName?: string) => Promise<T>
     loadBootstrapScriptContent: (entryName: string) => Promise<string>
   }
@@ -71,5 +68,3 @@ declare module './react/context.js' {
 
   export default RouteContext
 }
-
-

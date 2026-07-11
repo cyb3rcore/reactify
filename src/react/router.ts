@@ -65,9 +65,7 @@ function patternToRegex(path: string): { regex: RegExp; paramNames: string[] } {
       return '__PARAM__'
     })
   // Now escape regex special chars
-  processed = processed
-    .replace(/[.+?^${}()|\\]/g, '\\$&')
-    .replace(/\//g, '\\/')
+  processed = processed.replace(/[.+?^${}()|\\]/g, '\\$&').replace(/\//g, '\\/')
   processed = processed.replace(/\\\*/g, '(.+)')
   // Replace sentinel tokens with real capture groups (safe because regex
   // chars are already escaped, so no false matches on literal [ / ])
@@ -108,7 +106,8 @@ export function matchPath(pattern: string, pathname: string): Record<string, str
 }
 
 export function matchRoute<T extends { path: string }>(
-  routes: T[], pathname: string
+  routes: T[],
+  pathname: string,
 ): { route: T; params: Record<string, string> } | null {
   const sorted = [...routes].sort((a, b) => {
     const aDynamic = a.path.includes('[') || a.path.includes(':')

@@ -1,8 +1,17 @@
 import { createHtmlTemplateFunction, removeHtmlModuleScripts } from '../vite/utils.js'
 
-export function createHtmlTemplates(source: string, config: Record<string, unknown>): {
-  universal: { beforeElement: (data?: Record<string, unknown>) => string; afterElement: (data?: Record<string, unknown>) => string }
-  serverOnly: { beforeElement: (data?: Record<string, unknown>) => string; afterElement: (data?: Record<string, unknown>) => string }
+export function createHtmlTemplates(
+  source: string,
+  config: Record<string, unknown>,
+): {
+  universal: {
+    beforeElement: (data?: Record<string, unknown>) => string
+    afterElement: (data?: Record<string, unknown>) => string
+  }
+  serverOnly: {
+    beforeElement: (data?: Record<string, unknown>) => string
+    afterElement: (data?: Record<string, unknown>) => string
+  }
 } {
   const el = '<!-- element -->'
 
