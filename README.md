@@ -1,5 +1,8 @@
 # @cyb3rcore/reactify
 
+[reactify.sh](https://reactify.sh)
+[Docs (WIP)](https://docs.reactify.sh)
+
 React SSR + RSC framework for [Fastify](https://fastify.dev). Server-rendered React with streaming, file-system routing, server actions, and React Server Components — all native on Fastify.
 
 ## Quick Start
@@ -21,10 +24,6 @@ Scaffold a new project with the CLI and start developing immediately.
 - **Vite-powered development** with HMR and production builds
 - **Express middleware compatibility** via @fastify/middie
 - **Built with TypeScript** — full type safety end to end
-
-## Demo
-
-See [reactify.sh](https://reactify.sh) for a live demo repository showcasing the framework in action.
 
 ## License
 
