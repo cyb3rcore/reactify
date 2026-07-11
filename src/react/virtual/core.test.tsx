@@ -220,6 +220,19 @@ describe('useRouteHead', () => {
 })
 
 // ---- Section: navigate ----
+// jsdom doesn't allow vi.spyOn(window.location, 'reload'),
+// so we wrap it with a counter at the module level
+let reloadCount = 0
+const origReload = Object.getOwnPropertyDescriptor(Location.prototype, 'reload')?.value
+if (origReload) {
+  Object.defineProperty(window.location, 'reload', {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+    value: () => { reloadCount++ },
+  })
+}
+
 describe('navigate', () => {
   // When navigate() is called with a path, expect location to update
   it('changes location via navigate()', () => {
@@ -303,8 +316,8 @@ describe('navigate', () => {
     goSpy.mockRestore()
   })
 
-  // When navigating to an RSC route, expect SPA navigation (not full page reload)
-  it('navigate to RSC route uses SPA navigation', () => {
+  // When navigating to an RSC route, expect no full page reload
+  it('navigate to RSC route does not reload', () => {
     const rscRoutes = [
       ...testRoutes,
       { path: '/rsc-page', rsc: true },
@@ -324,17 +337,21 @@ describe('navigate', () => {
     )
     act(() => { screen.getByText('Go RSC').click() })
     expect(screen.getByTestId('path').textContent).toBe('/rsc-page')
+    expect(reloadCount).toBe(0)
   })
 
-  // When popstate fires for an RSC route, expect SPA navigation (not full page reload)
-  it('popstate for RSC route uses SPA navigation', () => {
+  // When popstate fires for an RSC route, expect no full page reload
+  it('popstate for RSC route does not reload', () => {
     const rscRoutes = [
       ...testRoutes,
       { path: '/rsc-page', rsc: true },
     ]
     function TestComponent() {
       const { location } = useRouteContext()
-      return React.createElement('div', null, location.pathname)
+      return React.createElement(
+        'div', null,
+        React.createElement('span', { 'data-testid': 'path' }, location.pathname),
+      )
     }
     render(
       <RouteProvider routes={rscRoutes as RouteDef[]} location="/rsc-page">
@@ -346,8 +363,9 @@ describe('navigate', () => {
       window.history.pushState(null, '', '/')
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
-    // Should have navigated via SPA to /
-    expect(screen.getByText('/')).toBeDefined()
+    // Should have navigated via SPA to / without reload
+    expect(screen.getByTestId('path').textContent).toBe('/')
+    expect(reloadCount).toBe(0)
   })
 })
 
