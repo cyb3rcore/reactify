@@ -36,11 +36,11 @@ export function useRouteContext(): RouteContextValue {
  * route identifiers to their corresponding async import loaders.
  * This function attaches lazy-loaded components to each route entry.
  */
-export async function hydrateRoutes(
+export function hydrateRoutes(
   fromInput:
     | Array<{ path: string; id?: string; [key: string]: unknown }>
     | Record<string, () => Promise<unknown>>,
-): Promise<RouteDef[]> {
+): RouteDef[] {
   let loaders: Record<string, () => Promise<unknown>>
   if (Array.isArray(fromInput)) {
     loaders = Object.fromEntries(
