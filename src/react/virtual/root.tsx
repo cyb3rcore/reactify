@@ -1,17 +1,19 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { useRouteContext } from './core.js'
+import type { RscPayload } from './rsc-content.js'
 
-// Lazy import RscContent so server components that import server-only modules
+// Lazy import RscSlot so server components that import server-only modules
 // (e.g. @cyb3rcore/reactify/server with node:async_hooks) are never loaded in
-// the browser. RscContent fetches the RSC flight payload from the server,
+// the browser. RscSlot fetches the RSC flight payload from the server,
 // avoiding client-side evaluation of server component code.
-const RscContent = lazy(() => import('./rsc-content.js'))
+const RscSlot = lazy(() => import('./rsc-content.js'))
 
 interface RouteRendererProps {
   notFound?: React.ComponentType
+  initialRscPromise?: Promise<RscPayload>
 }
 
-export function RouteRenderer({ notFound: NotFound }: RouteRendererProps) {
+export function RouteRenderer({ notFound: NotFound, initialRscPromise }: RouteRendererProps) {
   const { match, params, route: routeData } = useRouteContext()
 
   if (!match) {
@@ -19,7 +21,7 @@ export function RouteRenderer({ notFound: NotFound }: RouteRendererProps) {
     return null
   }
 
-  // RSC routes: render via RscContent which fetches the RSC payload from the
+  // RSC routes: render via RscSlot which fetches the RSC payload from the
   // server. Server component code (with server-only imports) is never loaded
   // in the browser — the flight data delivers the rendered element tree.
   // This path is a safety net (popstate, navigate API) — normal link clicks
@@ -27,7 +29,7 @@ export function RouteRenderer({ notFound: NotFound }: RouteRendererProps) {
   if (match.rsc) {
     return (
       <Suspense fallback={null}>
-        <RscContent />
+        <RscSlot initialRscPromise={initialRscPromise} />
       </Suspense>
     )
   }
