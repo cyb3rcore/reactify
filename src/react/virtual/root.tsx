@@ -22,11 +22,11 @@ export function RouteRenderer({ notFound: NotFound }: RouteRendererProps) {
   // RSC routes: render via RscContent which fetches the RSC payload from the
   // server. Server component code (with server-only imports) is never loaded
   // in the browser — the flight data delivers the rendered element tree.
-  // On the server, RSC routes are handled by rsc-entry/ssr-entry, so this
-  // code path only runs during client-side SPA navigation.
+  // This path is a safety net (popstate, navigate API) — normal link clicks
+  // to RSC routes trigger full page navigation for SSR.
   if (match.rsc) {
     return (
-      <Suspense fallback={<div className="rsc-loading">Loading...</div>}>
+      <Suspense fallback={null}>
         <RscContent />
       </Suspense>
     )
