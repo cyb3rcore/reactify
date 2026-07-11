@@ -1,5 +1,37 @@
 # @cyb3rcore/reactify
 
+## 1.0.3
+
+### Patch Changes
+
+- fix: resolve runtime errors from linked package development setup
+
+  Four coordinated fixes for issues that only appear when consuming reactify
+  via pnpm link: override (local development):
+
+  - **SSR React resolution** — rendering.ts now uses createRequire pointed at
+    the consumer's project root to resolve react-dom/server, preventing
+    "Invalid hook call" from mismatched React instances between Vite's SSR
+    module runner (consumer's React) and Node.js ESM resolution (framework's
+    React).
+
+  - **Virtual module resolution** — browser-only imports (@vitejs/plugin-rsc
+    /browser) converted to dynamic imports in rsc-content.tsx and
+    prefetch-cache.ts to prevent "virtual:" protocol crash in server code.
+
+  - **Transitive dependency resolution** — added Vite alias for rsc-html-stream
+    and devalue resolved from the framework's node_modules, fixing resolution
+    failures when pnpm link: doesn't hoist transitive deps.
+
+  - **Error page rendering** — removed Youch dependency from the RSC error
+    handler (import fails from virtual modules with no physical file path).
+    Replaced with styled inline HTML error page showing full stack traces.
+    Client-side RscErrorBoundary also shows full `.stack` trace.
+
+  - **React deduplication** — resolve.dedupe for react/react-dom across all
+    Vite environments + configEnvironment hook to filter React from SSR/RSC
+    noExternal. react/react-dom moved from dependencies to peerDependencies.
+
 ## 1.0.2
 
 ### Patch Changes

@@ -102,10 +102,11 @@ describe('RscSlot', () => {
   })
 
   it('registers setServerCallback on mount', async () => {
-    const [{ RouteProvider }, { default: RscSlot, setServerCallback }] = await Promise.all([
+    const [{ RouteProvider }, { default: RscSlot }] = await Promise.all([
       import('./core.js'),
       import('./rsc-content.js'),
     ])
+    const { setServerCallback } = await import('@vitejs/plugin-rsc/browser')
 
     await act(async () => {
       render(
