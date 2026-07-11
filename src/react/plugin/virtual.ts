@@ -112,8 +112,12 @@ export async function resolveId(
     }
   }
 
-  if (prefix.test(id)) {
-    const [, virtual] = id.split(prefix)
+  // Strip \0 prefix for direct resolution (e.g. when the RSC plugin emits a
+  // chunk for \0$app/ssr-entry.js during SSR build — resolveId must normalize
+  // it back to $app/ssr-entry.js to match the prefix regex).
+  const cleanId = id.charCodeAt(0) === 0 ? id.slice(1) : id
+  if (prefix.test(cleanId)) {
+    const [, virtual] = cleanId.split(prefix)
     if (virtual) {
       const override = loadVirtualModuleOverride(this.root ?? '', virtual)
       if (override) {
