@@ -267,6 +267,7 @@ async function handler(request: Request): Promise<Response> {
       req: rscRequest.__req,
       server: rscRequest.__server,
       reply: rscRequest.__reply,
+      params: (rscRequest.__req as unknown as Record<string, unknown>).params as Record<string, string> | undefined,
     } as import('../rsc-context.js').RscContext)
   }
 
@@ -403,7 +404,7 @@ async function handler(request: Request): Promise<Response> {
     // Create a React element from the route module's default export.
     // pageModule is narrowed to PageModule by the isPageModule guard above,
     // so default is already ComponentType<...> | undefined.
-    const element: ReactNode = pageModule.default ? createElement(pageModule.default) : null
+    const element: ReactNode = pageModule.default ? createElement(pageModule.default, { params: matchResult.params }) : null
 
     // Do NOT clear __rsc_formState here — the element created above is a
     // React element (createElement does NOT invoke the component function).

@@ -1,5 +1,21 @@
 # @cyb3rcore/reactify
 
+## 1.0.7
+
+### Patch Changes
+
+- feat: RSC route params — pass params as props to server component pages
+
+  RSC pages (export const rsc = true) can now receive route params via
+  standard React props instead of calling useParams() which crashes in
+  the RSC server environment (React hooks are unavailable).
+
+  Changes:
+
+  - rsc-context.ts: Added params to RscContext interface, exported getParams()
+  - rsc-entry.tsx: Passes req.params through setSyncContext() and matchResult.params
+    as props to createElement(pageModule.default, { params })
+
 ## 1.0.6
 
 ### Patch Changes
