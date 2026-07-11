@@ -5,6 +5,7 @@ export interface RscContext {
   req: FastifyRequest
   reply: FastifyReply
   server: FastifyInstance
+  params?: Record<string, string>
 }
 
 const rscStore = new AsyncLocalStorage<RscContext>()
@@ -44,6 +45,10 @@ export function getReply(): FastifyReply | undefined {
 
 export function getServer(): FastifyInstance | undefined {
   return resolveContext()?.server
+}
+
+export function getParams(): Record<string, string> | undefined {
+  return resolveContext()?.params
 }
 
 export { rscStore }
