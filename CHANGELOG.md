@@ -4,6 +4,15 @@
 
 ### Patch Changes
 
+- fix: add src/client/index.html to loadHtmlTemplate candidates for projects with vite root subdirectory
+  fix: replace Youch with safe inline error pages in routing.ts
+  fix: add renderErrorPage() export for testable error page generation
+  test: 9 new tests for rsc-entry error handler + 3 new routing error handler tests
+
+## 1.0.6
+
+### Patch Changes
+
 - fix: replace Youch with safe inline error pages, hide stack traces in production
 
   - routing.ts: Removed static Youch import, replaced with inline error page
