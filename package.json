@@ -2,7 +2,7 @@
   "name": "@cyb3rcore/reactify",
   "version": "0.1.2",
   "license": "MIT",
-  "description": "Fork of fastify-vite with React support",
+  "description": "React SSR + RSC for Fastify — React Server Components and SSR on Fastify + Vite, with file-system routing, server actions, streaming, and Valtio integration",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
