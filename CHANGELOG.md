@@ -1,5 +1,42 @@
 # @cyb3rcore/reactify
 
+## 1.0.8
+
+### Patch Changes
+
+- fix: intercept ESM re-export chain to prevent node:fs crash in client browser
+
+  dist/index.js uses static ESM re-exports that create a resolution chain
+  leading to dist/vite/config/paths.js which imports node:fs. When a client
+  component imports from @cyb3rcore/reactify, Vite follows this chain and
+  tries to serve paths.js to the browser, crashing on node:fs externalization.
+
+  Changes:
+
+  - resolveId: intercepts @cyb3rcore/reactify in client environment, returns
+    a browser-safe stub that only re-exports Link, RouteProvider, RouteRenderer
+    from virtual module paths ($app/link.js, $app/core.js, $app/root.js)
+  - load: safety net intercept when resolveId doesn't fire (e.g. @vitejs/plugin-rsc
+    resolves the import first) — catches physical dist/index.js path and returns
+    the client stub
+  - Uses this.environment from Vite 8's PluginContext instead of a stale closure
+    variable; unbinds load hook so this.environment resolves correctly
+  - Registers link.tsx in virtual modules array so the client stub can resolve
+    $app/link.js
+
+- fix: SSR-safe Link component, HMR preamble injection, and misc improvements
+
+  - Link: wraps useNavigate() in try/catch so the component renders without
+    RouteProvider context during SSR (falls back to window.location.href)
+  - ssr-entry: injects Vite React Refresh preamble into loaded HTML templates
+    to prevent $RefreshSig$() crash during ESM evaluation
+  - index.ts: exports RouteProvider and RouteRenderer from package entry
+  - vite/config.ts: adds @vite-ignore to dynamic import() for renderer package
+  - vite/config/defaults.ts: guards process.argv access with typeof check
+  - e2e: expands test coverage for Link component (rendering, prefetch on hover,
+    prefetch=false, click navigation, cross-RSC/non-RSC navigation, prefetch
+    persistence after client-side nav, flash-free content loading)
+
 ## 1.0.7
 
 ### Patch Changes

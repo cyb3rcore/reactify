@@ -54,7 +54,7 @@ export async function configure(options: ReactifyViteOptions): Promise<RuntimeCo
   // (e.g. a package name like "reactify-renderer-react"), import it now and
   // merge its default + named exports into the renderer config object.
   if (typeof runtimeConfig.renderer === 'string') {
-    const { default: renderer, ...named } = await import(runtimeConfig.renderer)
+    const { default: renderer, ...named } = await import(/* @vite-ignore */ runtimeConfig.renderer)
     runtimeConfig.renderer = { ...renderer, ...named }
   }
   /*

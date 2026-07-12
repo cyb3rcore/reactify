@@ -20,7 +20,7 @@ type ConfigDefaults = Omit<IncompleteRuntimeConfig, 'root' | 'viteConfig'>
 
 export const DefaultConfig: ConfigDefaults = {
   /** Run in dev mode when the CLI flag is present */
-  dev: process.argv.includes('--dev'),
+  dev: typeof process !== 'undefined' && process.argv.includes('--dev'),
 
   /** No renderer package by default; users supply one via options */
   renderer: {},

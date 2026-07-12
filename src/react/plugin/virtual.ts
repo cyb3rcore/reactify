@@ -27,6 +27,7 @@ function buildVirtualModuleList(): string[] {
     'context.ts',
     'core.tsx',
     'index.ts',
+    'link.tsx',
     'rsc-entry.tsx',
     'ssr-entry.tsx',
     'rsc-content.tsx',
