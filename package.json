@@ -12,6 +12,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": "./dist/client-index.js",
       "import": "./dist/index.js"
     },
     "./plugin": {
