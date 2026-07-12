@@ -1,5 +1,19 @@
 # @cyb3rcore/reactify
 
+## 1.0.9
+
+### Patch Changes
+
+- fix: strip Vite version hash in load-hook path check (5059a8a4)
+
+  Vite appends `?v=` cache-busting hashes to module URLs from pnpm/npm
+  registries, causing `endsWith('/dist/index.js')` in the load-hook client
+  intercept to miss the actual path `/dist/index.js?v=24fc5805`. The real
+  `dist/index.js` with its `node:fs` re-export chain was served to the
+  browser instead of the client stub.
+
+  Fix: strip query parameters before the path-suffix check.
+
 ## 1.0.8
 
 ### Patch Changes
