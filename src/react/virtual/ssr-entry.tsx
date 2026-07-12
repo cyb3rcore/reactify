@@ -46,7 +46,17 @@ function loadHtmlTemplate(): string {
   for (const path of candidates) {
     try {
       if (existsSync(path)) {
-        return readFileSync(path, 'utf-8')
+        let template = readFileSync(path, 'utf-8')
+        // Inject the Vite React Refresh preamble into any loaded HTML template.
+        // Vite's transformIndexHtml doesn't apply to server-generated responses
+        // (only to HTML files served through Vite's dev server middleware).
+        // Without this inline script, @vitejs/plugin-react's $RefreshSig$()
+        // wrapper throws during ESM evaluation and mount.tsx never runs.
+        const preamble = '<script>window.__vite_plugin_react_preamble_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(t)=>t</script>'
+        // Inject before </body> — same position as the fallback template.
+        // Must run synchronously before <script type="module"> evaluates.
+        template = template.replace('</body>', preamble + '\n</body>')
+        return template
       }
     } catch {
       // continue to next candidate

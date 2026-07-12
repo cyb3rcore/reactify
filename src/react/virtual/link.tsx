@@ -1,3 +1,4 @@
+'use client'
 import { useCallback, useRef, type ReactNode, type MouseEvent } from 'react'
 import { useNavigate } from './core.js'
 import { prefetchRsc } from './prefetch-cache.js'
@@ -9,7 +10,16 @@ interface LinkProps {
 }
 
 export default function Link({ to, children, prefetch = 'hover' }: LinkProps) {
-  const navigate = useNavigate()
+  let navigate: ReturnType<typeof useNavigate>
+  try {
+    navigate = useNavigate()
+  } catch {
+    // During SSR, there's no RouteProvider context. Events don't fire during SSR
+    // anyway, so a fallback that does direct navigation is sufficient.
+    navigate = (to: string | number) => {
+      if (typeof to === 'string') window.location.href = to
+    }
+  }
   const prefetchedRef = useRef(false)
 
   const doPrefetch = useCallback(() => {
