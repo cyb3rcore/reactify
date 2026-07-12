@@ -276,28 +276,6 @@ async function load(
   this: PluginContext,
   id: string,
 ): Promise<string | { code: string; map: null } | undefined> {
-  // === LOAD-HOOK CLIENT INTERCEPT ===
-  // Safety net when resolveId intercept doesn't fire because @vitejs/plugin-rsc
-  // resolves the package import first. Intercept the physical dist/index.js path
-  // and return the browser-safe client stub for client environment requests.
-  // Strip Vite's cache-busting version hash (?v=...) before path checks
-  const normalizedId = id.replace(/\\/g, '/').replace(/\?.*$/, '')
-  if (
-    this?.environment?.name === 'client' &&
-    !id.startsWith('\0') &&
-    normalizedId.endsWith('/dist/index.js') &&
-    (normalizedId.includes('reactify') || normalizedId.includes('@cyb3rcore'))
-  ) {
-    return {
-      code: [
-        `export { default as Link } from '/$app/link.js'`,
-        `export { RouteProvider } from '/$app/core.js'`,
-        `export { RouteRenderer } from '/$app/root.js'`,
-      ].join('\n'),
-      map: null,
-    }
-  }
-
   // === CLIENT ENVIRONMENT STUBS ===
   // Provide browser-safe modules for intercepted server-only modules.
   if (id === '\0reactify:client-stub') {
