@@ -280,7 +280,8 @@ async function load(
   // Safety net when resolveId intercept doesn't fire because @vitejs/plugin-rsc
   // resolves the package import first. Intercept the physical dist/index.js path
   // and return the browser-safe client stub for client environment requests.
-  const normalizedId = id.replace(/\\/g, '/')
+  // Strip Vite's cache-busting version hash (?v=...) before path checks
+  const normalizedId = id.replace(/\\/g, '/').replace(/\?.*$/, '')
   if (
     this?.environment?.name === 'client' &&
     !id.startsWith('\0') &&
