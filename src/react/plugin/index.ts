@@ -139,6 +139,36 @@ export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plug
         }
       },
       resolveId(id: string, importer?: string) {
+        // === CLIENT ENVIRONMENT INTERCEPT ===
+        //
+        // ROOT CAUSE: dist/index.js uses `export ... from './vite/index.js'`
+        // which creates a static ESM re-export chain:
+        //   dist/index.js → dist/vite/index.js → dist/vite/config.js
+        //     → dist/vite/config/paths.js → node:fs (crashes in browser)
+        //
+        // When a browser-side component imports ANY export from
+        // @cyb3rcore/reactify (even just `Link`), Vite follows this chain
+        // and tries to serve paths.js — whose `node:fs` import is externalized
+        // for browser compatibility, causing the crash.
+        //
+        // Fix: for the client environment, intercept the package entry and
+        // return a stub that only re-exports browser-safe modules.
+        // Uses this.environment (provided by Vite 8's PluginContext) instead of
+        // a closure variable — configEnvironment runs once per environment during
+        // config and would leave a stale name for the wrong environment.
+        if ((this as any).environment?.name === 'client') {
+          if (id === '@cyb3rcore/reactify' || id === 'reactify') {
+            return { id: '\0reactify:client-stub' }
+          }
+          // Safety net: prevent any vite config module from reaching the client
+          if (id.includes('/dist/vite/config/') ||
+              id.endsWith('/dist/vite/config.js') ||
+              id.endsWith('/dist/vite/index.js') ||
+              id.endsWith('/dist/vite/plugin.js')) {
+            return { id: '\0reactify:vite-config-stub' }
+          }
+        }
+
         // Resolve @vitejs/plugin-rsc/ subpath imports from virtual modules
         // (e.g. @vitejs/plugin-rsc/rsc, @vitejs/plugin-rsc/browser).
         // Virtual modules have no physical file path, so Vite's standard
@@ -159,7 +189,7 @@ export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plug
         // here would cause Rolldown to attempt file-system lookup.
         return resolveId.call(context, id, importer)
       },
-      load: load.bind(context),
+      load: load,  // NOT bound — needs this.environment from Vite's PluginContext
       transform: {
         order: 'pre' as const,
         handler(code: string, id: string) {
@@ -246,6 +276,43 @@ async function load(
   this: PluginContext,
   id: string,
 ): Promise<string | { code: string; map: null } | undefined> {
+  // === LOAD-HOOK CLIENT INTERCEPT ===
+  // Safety net when resolveId intercept doesn't fire because @vitejs/plugin-rsc
+  // resolves the package import first. Intercept the physical dist/index.js path
+  // and return the browser-safe client stub for client environment requests.
+  const normalizedId = id.replace(/\\/g, '/')
+  if (
+    this?.environment?.name === 'client' &&
+    !id.startsWith('\0') &&
+    normalizedId.endsWith('/dist/index.js') &&
+    (normalizedId.includes('reactify') || normalizedId.includes('@cyb3rcore'))
+  ) {
+    return {
+      code: [
+        `export { default as Link } from '/$app/link.js'`,
+        `export { RouteProvider } from '/$app/core.js'`,
+        `export { RouteRenderer } from '/$app/root.js'`,
+      ].join('\n'),
+      map: null,
+    }
+  }
+
+  // === CLIENT ENVIRONMENT STUBS ===
+  // Provide browser-safe modules for intercepted server-only modules.
+  if (id === '\0reactify:client-stub') {
+    return {
+      code: [
+        `export { default as Link } from '/$app/link.js'`,
+        `export { RouteProvider } from '/$app/core.js'`,
+        `export { RouteRenderer } from '/$app/root.js'`,
+      ].join('\n'),
+      map: null,
+    }
+  }
+  if (id === '\0reactify:vite-config-stub') {
+    return { code: 'export default {};', map: null }
+  }
+
   // Patch user modules that import useActionState from react.
   // Target plain source files (not virtual, not node_modules).
   // This allows useActionState to work in RSC server components where the

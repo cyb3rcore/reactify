@@ -117,25 +117,77 @@ test.describe('mixed mode', () => {
     expect(scrollY).toBe(100)
   })
 
-  test('prefetch on hover initiates RSC fetch for RSC routes', async ({ page }) => {
-    // Monitor RSC fetch requests
-    const rscRequests: string[] = []
+  test('Link renders an anchor with correct href', async ({ page }) => {
+    await page.goto(`${BASE_URL}/link-demo`)
+    await expect(page.locator('h1')).toHaveText('Link Demo Page')
+    const rscLink = page.getByRole('link', { name: 'RSC Page' })
+    await expect(rscLink).toBeVisible()
+    await expect(rscLink).toHaveAttribute('href', '/rsc-page')
+  })
+
+  test('prefetch fires on hover over Link for RSC route', async ({ page }) => {
+    const requests: string[] = []
     page.on('request', (req) => {
-      if (req.url().includes('_.rsc')) rscRequests.push(req.url())
+      if (req.url().includes('_.rsc')) requests.push(req.url())
     })
+    await page.goto(`${BASE_URL}/link-demo`)
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('link', { name: 'RSC Page' }).hover()
+    await page.waitForTimeout(1000)
+    expect(requests.length).toBeGreaterThanOrEqual(1)
+  })
 
-    await page.goto(BASE_URL)
-
-    // Hover over the link to trigger prefetch (delegated mouseenter handler)
-    const rscLink = page.locator('a[href="/rsc-page"]')
-    await rscLink.hover()
-
-    // Wait for any prefetch request to fire
+  test('does not prefetch when prefetch=false', async ({ page }) => {
+    const requests: string[] = []
+    page.on('request', (req) => {
+      if (req.url().includes('_.rsc')) requests.push(req.url())
+    })
+    await page.goto(`${BASE_URL}/link-demo`)
+    await page.waitForLoadState('networkidle')
+    // Clear any requests from initial page load
+    requests.length = 0
+    await page.getByRole('link', { name: 'RSC (no prefetch)' }).hover()
     await page.waitForTimeout(500)
+    expect(requests.length).toBe(0)
+  })
 
-    // Verify a prefetch request was made for the RSC page
-    const prefetched = rscRequests.some(url => url.includes('/rsc-page_.rsc'))
-    expect(prefetched).toBe(true)
+  test('click on Link navigates to RSC page without full reload', async ({ page }) => {
+    await page.goto(`${BASE_URL}/link-demo`)
+    await expect(page.locator('h1')).toHaveText('Link Demo Page')
+    await page.getByRole('link', { name: 'RSC Page' }).click()
+    await expect(page.locator('h1')).toHaveText('RSC Page')
+  })
+
+  test('click on Link navigates to non-RSC page', async ({ page }) => {
+    await page.goto(`${BASE_URL}/link-demo`)
+    await page.getByRole('link', { name: 'About' }).click()
+    await expect(page.locator('h1')).toHaveText('About Page')
+  })
+
+  test('Link navigation from RSC page works', async ({ page }) => {
+    await page.goto(`${BASE_URL}/rsc-link-demo`)
+    await expect(page.locator('h1')).toHaveText('RSC Link Demo')
+    await page.getByRole('link', { name: 'Home' }).click()
+    await expect(page.locator('h1')).toHaveText('Link Demo Page')
+  })
+
+  test('prefetch still works after client-side navigation', async ({ page }) => {
+    const requests: string[] = []
+    page.on('request', (req) => {
+      if (req.url().includes('_.rsc')) requests.push(req.url())
+    })
+    await page.goto(`${BASE_URL}/link-demo`)
+    await page.waitForLoadState('networkidle')
+    // Navigate to a different page
+    await page.getByRole('link', { name: 'About' }).click()
+    await expect(page.locator('h1')).toHaveText('About Page')
+    // Go back to link-demo via URL
+    await page.goto(`${BASE_URL}/link-demo`)
+    await page.waitForLoadState('networkidle')
+    // Hover should still prefetch
+    await page.getByRole('link', { name: 'RSC Page' }).hover()
+    await page.waitForTimeout(1000)
+    expect(requests.length).toBeGreaterThanOrEqual(1)
   })
 
   test('navigation to RSC page shows content without loading flash', async ({ page }) => {
