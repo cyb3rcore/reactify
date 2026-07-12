@@ -1,5 +1,22 @@
 # @cyb3rcore/reactify
 
+## 1.0.10
+
+### Patch Changes
+
+- fix: use package.json browser export condition instead of plugin intercept (29cb8851)
+
+  Replace the plugin-level load-hook intercept approach with Vite 8's native
+  `exports` field `browser` condition. The RSC plugin's `order:pre`
+  resolveId intercepts all bare imports before our plugin's resolveId fires,
+  and the load-hook approach caused Vite 8 module cache collisions across
+  all packages' dist/index.js paths.
+
+  Vite 8 includes `"browser"` in `defaultClientConditions`, so when
+  resolving `@cyb3rcore/reactify` for the browser, Vite naturally uses
+  `dist/client-index.js` which only exports browser-safe modules
+  (Link, RouteProvider, RouteRenderer). No plugin intercepts needed.
+
 ## 1.0.9
 
 ### Patch Changes
