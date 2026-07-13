@@ -21,6 +21,7 @@ import { matchRoute } from '../router.js'
 import { getContext, setSyncContext } from '../rsc-context.js'
 import { filePathToRoutePath } from '../route-utils.js'
 import type { RscAttachedRequest } from '../rsc-handler.js'
+import { isRedirectError } from '../redirect.js'
 import routesManifest from '$app/routes.js'
 import ValtioHydrator from '$app/valtio-hydrator.js'
 
@@ -232,6 +233,7 @@ async function extractOnEnter(
       return (result as Record<string, unknown> | undefined) ?? null
     }
   } catch (err: unknown) {
+    if (isRedirectError(err)) throw err
     console.error('[rsc-entry] onEnter error:', err)
   }
   return null
@@ -467,6 +469,14 @@ async function handler(request: Request): Promise<Response> {
 
     return htmlResult
   } catch (error: unknown) {
+    // Detect redirect errors — return a 3xx Response instead of rendering
+    if (isRedirectError(error)) {
+      return new Response(null, {
+        status: error.status,
+        headers: { Location: error.location },
+      })
+    }
+
     // Log the error for server-side debugging
     const loggable =
       error instanceof Error
