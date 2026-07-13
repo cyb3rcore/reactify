@@ -15,6 +15,13 @@ const isServer = typeof window === 'undefined'
 const useIsomorphicLayoutEffect = typeof document !== 'undefined' ? useLayoutEffect : useEffect
 const routeMapRef: { current: Record<string, unknown> } = { current: {} }
 
+/**
+ * Matches the symbol key in rsc-context.ts. The RSC handler (rsc-entry.tsx)
+ * stores params on this global symbol via setSyncContext(). We read it
+ * directly here so useParams() works in both RSC and SSR environments.
+ */
+const RSC_SYNC_CTX = Symbol.for('reactify.rscContext')
+
 export interface RouteDef {
   path: string
   id?: string
@@ -47,6 +54,18 @@ export function useNavigate() {
 }
 
 export function useParams() {
+  // RSC server rendering: params come from rsc-context.ts's
+  // globalThis bridge (populated by rsc-entry.tsx via setSyncContext).
+  // React hooks (useContext) are not available in RSC server components
+  // because there's no RouteProvider wrapping the element tree, so we
+  // read from the global symbol directly.
+  if (isServer) {
+    const syncCtx = (globalThis as Record<symbol, unknown>)[RSC_SYNC_CTX]
+    if (syncCtx && typeof syncCtx === 'object') {
+      const rscParams = (syncCtx as Record<string, unknown>).params as Record<string, string> | undefined
+      if (rscParams) return rscParams
+    }
+  }
   return useRouteContext().params
 }
 
