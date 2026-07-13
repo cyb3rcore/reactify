@@ -305,6 +305,9 @@ async function handler(request: Request): Promise<Response> {
         const data = await action.apply(null, callArgs)
         returnValue = { ok: true, data }
       } catch (e: unknown) {
+        // Redirect errors must propagate — they produce a 302 Response,
+        // not a failed action response
+        if (isRedirectError(e)) throw e
         returnValue = { ok: false, data: e }
         actionStatus = 500
       }
@@ -315,7 +318,9 @@ async function handler(request: Request): Promise<Response> {
       try {
         const result = await decodedAction()
         formState = await decodeFormState(result, formData)
-      } catch {
+      } catch (e: unknown) {
+        // Redirect errors propagate to the outer handler catch block
+        if (isRedirectError(e)) throw e
         return new Response('Internal Server Error', { status: 500 })
       }
     }
