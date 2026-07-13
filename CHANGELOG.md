@@ -1,5 +1,30 @@
 # @cyb3rcore/reactify
 
+## 1.1.0
+
+### Minor Changes
+
+- feat: add redirect() utility for onEnter lifecycle hooks
+
+  Adds a throw-based `redirect(to, status?)` utility that produces HTTP 3xx
+  responses from page `onEnter` hooks without rendering page content. The
+  `RedirectError` is caught at three boundaries:
+
+  - **SSR**: Fastify preHandler re-throws → error handler produces 302 response
+  - **RSC via onEnter**: extractOnEnter re-throws → handler catch block returns
+    302 Response with Location header
+  - **Server actions**: Server action catch blocks re-throw → outer handler
+    returns 302 Response
+
+  The SSR pipeline (sendResponse, ssr-entry.tsx generateHTML) already handled
+  3xx responses correctly — no changes needed there.
+
+  Also includes `isRedirectError()` type guard for safe detection across
+  Vite module boundaries (uses duck-type digest check, not instanceof).
+
+  Exports from: @cyb3rcore/reactify, @cyb3rcore/reactify/server, and
+  @cyb3rcore/reactify/renderer.
+
 ## 1.0.11
 
 ### Patch Changes
