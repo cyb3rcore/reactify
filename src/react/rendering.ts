@@ -9,6 +9,7 @@ import { RouteProvider, type RouteDef } from './virtual/core.js'
 import { RouteRenderer } from './virtual/root.js'
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import type { RuntimeConfig } from '../vite/types/options.js'
+import type { ClientModule } from '../vite/types/client.js'
 
 /**
  * Lazily-resolved React `createElement` and `renderToReadableStream`.
@@ -76,19 +77,18 @@ export async function onAllReady(app: ReactNode): Promise<Readable | Error> {
   }
 }
 
-export async function createRenderFunction({
-  routes,
-  create,
-}: {
-  routes: Array<Record<string, unknown>>
-  create: (...args: unknown[]) => ReactNode
-}, _scope?: FastifyInstance, config?: RuntimeConfig): Promise<
+export async function createRenderFunction(
+  client: ClientModule,
+  _scope?: FastifyInstance,
+  config?: RuntimeConfig,
+): Promise<
   (this: FastifyReply) => Promise<{
     routes: Array<Record<string, unknown>>
     context: unknown
     body?: Readable | Error
   }>
 > {
+  const routes = (client.routes as Array<Record<string, unknown>>) ?? []
   // Initialize React resolution from the consumer's project root so that
   // react-dom/server resolves from the same React copy used by the app element.
   // This prevents "Invalid hook call" from mismatched React instances when the

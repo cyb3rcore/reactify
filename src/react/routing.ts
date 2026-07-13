@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import type { ClientModule, ClientEntries } from '../vite/types/client.js'
 import type { RuntimeConfig } from '../vite/types/options.js'
-import type { RouteDefinition } from '../vite/types/route.js'
+import type { ClientRouteArgs, CreateRouteArgs, RouteDefinition } from '../vite/types/route.js'
 import RouteContext from './context.js'
 import { rscStore, setSyncContext } from './rsc-context.js'
 
@@ -57,7 +57,7 @@ function escapeHtml(text: string): string {
 }
 
 export function createErrorHandler(
-  _args: Record<string, unknown>,
+  _args: ClientRouteArgs,
   scope: FastifyInstance,
   config: RuntimeConfig,
 ): (error: Error, req: FastifyRequest, reply: FastifyReply) => Promise<FastifyReply> {
@@ -97,18 +97,13 @@ h1{color:#f85149;font-size:1.5rem}
  * companion _.rsc route registration for client-side action/fetch URLs.
  */
 export async function createRoute(
-  {
-    client,
-    errorHandler,
-    route,
-  }: {
-    client: ClientModule
-    errorHandler: (...args: unknown[]) => unknown
-    route: ReactRouteDef
-  },
+  args: CreateRouteArgs,
   scope: FastifyInstance,
   config: RuntimeConfig,
 ): Promise<void> {
+  const client = args.client
+  const errorHandler = args.errorHandler as (...args: unknown[]) => unknown
+  const route = args.route as ReactRouteDef
   if (route.configure) {
     await route.configure(scope)
   }

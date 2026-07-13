@@ -1,4 +1,5 @@
 import type { FastifyInstance, RouteOptions } from 'fastify'
+import type { ClientModule } from './client.js'
 
 /**
  * Route definition used by the Vite plugin system to register routes.
@@ -20,10 +21,13 @@ export interface RouteDefinition extends Partial<RouteOptions> {
 
 /** Base args containing client and route, used by route handlers */
 export interface ClientRouteArgs {
-  client?: unknown
+  client?: ClientModule
   route?: RouteDefinition
 }
 
 /** Full args for createRoute including handler and error handler */
 export interface CreateRouteArgs
-  extends ClientRouteArgs, Pick<RouteOptions, 'handler' | 'errorHandler'> {}
+  extends ClientRouteArgs, Pick<RouteOptions, 'handler' | 'errorHandler'> {
+  /** client is required for createRoute */
+  client: ClientModule
+}
