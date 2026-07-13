@@ -210,4 +210,10 @@ test.describe('mixed mode', () => {
     })
     expect(sawEmptyState).toBe(false)
   })
+
+  test('redirect via onEnter lands on target page', async ({ page }) => {
+    await page.goto(`${BASE_URL}/redirect-me`)
+    // Browser follows the 302 and lands on /rsc-page
+    await expect(page.locator('h1')).toHaveText('RSC Page')
+  })
 })

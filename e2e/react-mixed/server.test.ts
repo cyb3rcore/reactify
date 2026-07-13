@@ -60,4 +60,22 @@ describe('react-mixed server', () => {
     expect(res.body).toContain('__FLIGHT_DATA')
     expect(res.body).not.toContain('Error:')
   })
+
+  it('redirect via onEnter returns 302 for SSR request', async () => {
+    const res = await server.inject({ method: 'GET', url: '/redirect-me' })
+    expect(res.statusCode).toBe(302)
+    expect(res.headers.location).toBe('/rsc-page')
+  })
+
+  it('redirect via onEnter returns 302 for RSC _.rsc request', async () => {
+    const res = await server.inject({ method: 'GET', url: '/redirect-me_.rsc' })
+    expect(res.statusCode).toBe(302)
+    expect(res.headers.location).toBe('/rsc-page')
+  })
+
+  it('redirect _.rsc response has no body', async () => {
+    const res = await server.inject({ method: 'GET', url: '/redirect-me_.rsc' })
+    expect(res.statusCode).toBe(302)
+    expect(res.body).toBe('')
+  })
 })
