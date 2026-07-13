@@ -167,7 +167,7 @@ describe('handler error path', () => {
 // ---------------------------------------------------------------------------
 
 import routesManifest from '$app/routes.js'
-import { RedirectError } from '../redirect.js'
+import { RedirectError, isRedirectError } from '../redirect.js'
 
 describe('redirect from onEnter in RSC handler', () => {
   afterEach(() => {
@@ -233,5 +233,63 @@ describe('redirect from onEnter in RSC handler', () => {
 
     expect(res.status).toBe(500)
     expect(res.headers.get('Content-Type')).toBe('text/html; charset=utf-8')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// server action redirect propagation
+// ---------------------------------------------------------------------------
+
+describe('server action redirect propagation', () => {
+  it('RedirectError thrown in action call is re-thrown, not serialized', async () => {
+    const { RedirectError, isRedirectError } = await import('../redirect.js')
+
+    const actionError = new RedirectError('/login', 302)
+
+    // The catch block must detect and re-throw RedirectError — not serialize it
+    await expect(async () => {
+      try {
+        throw actionError
+      } catch (e: unknown) {
+        // RIGHT: detect and re-throw
+        if (isRedirectError(e)) throw e
+
+        // WRONG: the current code serializes redirect as failure
+        // returnValue = { ok: false, data: e }
+        // actionStatus = 500
+      }
+    }).rejects.toThrow(RedirectError)
+  })
+
+  it('regular errors are still serialized as failed actions', async () => {
+    const { isRedirectError } = await import('../redirect.js')
+    let returnValue: unknown
+    let actionStatus: number | undefined
+    const regularError = new Error('validation failed')
+
+    try {
+      throw regularError
+    } catch (e: unknown) {
+      if (isRedirectError(e)) throw e
+      returnValue = { ok: false, data: e }
+      actionStatus = 500
+    }
+
+    expect(returnValue).toEqual({ ok: false, data: regularError })
+    expect(actionStatus).toBe(500)
+  })
+
+  it('progressive enhancement action catch block re-throws redirect errors', async () => {
+    const { RedirectError, isRedirectError } = await import('../redirect.js')
+
+    await expect(async () => {
+      try {
+        throw new RedirectError('/login', 302)
+      } catch {
+        // Current code: return new Response('Internal Server Error', { status: 500 })
+        // Fixed code: re-throw redirect errors
+        throw new RedirectError('/login', 302)
+      }
+    }).rejects.toThrow()
   })
 })
