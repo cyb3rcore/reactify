@@ -1,5 +1,36 @@
 # @cyb3rcore/reactify
 
+## 1.0.11
+
+### Patch Changes
+
+- fix: deduplicate virtual module IDs by stripping file extension (6bc9ab1f)
+
+  normalizeVirtualModuleId only normalized .jsx/.tsx → .js, but left .js
+  extensions intact. When the same source file was imported as `$app/core`
+  (from app code) vs `./core.js` (from within virtual modules like create.tsx),
+  Vite created separate module instances with different createContext(null)
+  calls. This caused routing hooks (useNavigate, useParams, useRouteData)
+  to read from a different RouterCtx than the one provided by RouteProvider,
+  throwing "useRouteContext must be used within a RouteProvider" on both SSR
+  and client-side hydration for any SSR page using these hooks.
+
+  Fix by stripping any file extension so all import variations of the same
+  virtual module resolve to the same Vite module ID.
+
+- feat: add RSC escape hatch for useParams via global symbol bridge (c2376427)
+
+  RSC server components render without a RouteProvider wrapping the element
+  tree, so useParams() can't read params from React context. Read them from
+  the globalThis symbol populated by rsc-entry.tsx via setSyncContext()
+  instead, matching the existing bridge in rsc-context.ts.
+
+- refactor: type route and rendering API with ClientModule (6cd18236)
+
+  createRenderFunction, createRoute, and createErrorHandler now use typed
+  ClientRouteArgs/CreateRouteArgs instead of inline or generic types.
+  hmrClient type tightened from unknown to ClientModule | undefined.
+
 ## 1.0.10
 
 ### Patch Changes
