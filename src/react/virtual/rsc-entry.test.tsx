@@ -161,3 +161,77 @@ describe('handler error path', () => {
     expect(body).toContain('mock route error')
   })
 })
+
+// ---------------------------------------------------------------------------
+// redirect from onEnter in RSC handler
+// ---------------------------------------------------------------------------
+
+import routesManifest from '$app/routes.js'
+import { RedirectError } from '../redirect.js'
+
+describe('redirect from onEnter in RSC handler', () => {
+  afterEach(() => {
+    // Restore the original mock for other tests
+    routesManifest['/page.tsx'] = () => {
+      throw new Error('mock route error')
+    }
+  })
+
+  it('returns 302 when onEnter throws RedirectError', async () => {
+    process.env.NODE_ENV = 'development'
+
+    // Override the route mock: module loads successfully but onEnter redirects
+    routesManifest['/page.tsx'] = () =>
+      Promise.resolve({
+        default: () => null,
+        onEnter: () => {
+          throw new RedirectError('/login', 302)
+        },
+      })
+
+    const mod = await import('./rsc-entry.js')
+    const handler = (mod as any).default.fetch as (req: Request) => Promise<Response>
+    const request = new Request('http://localhost/page')
+    const res = await handler(request)
+
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toBe('/login')
+  })
+
+  it('redirect Response body is empty (no content)', async () => {
+    process.env.NODE_ENV = 'development'
+
+    routesManifest['/page.tsx'] = () =>
+      Promise.resolve({
+        default: () => null,
+        onEnter: () => {
+          throw new RedirectError('/login', 302)
+        },
+      })
+
+    const mod = await import('./rsc-entry.js')
+    const handler = (mod as any).default.fetch as (req: Request) => Promise<Response>
+    const request = new Request('http://localhost/page')
+    const res = await handler(request)
+
+    const body = await res.text()
+    expect(body).toBe('')
+  })
+
+  it('existing error handler still returns 500 for non-redirect errors', async () => {
+    process.env.NODE_ENV = 'development'
+
+    // Route module that throws a regular Error (no redirect)
+    routesManifest['/page.tsx'] = () => {
+      throw new Error('regular error')
+    }
+
+    const mod = await import('./rsc-entry.js')
+    const handler = (mod as any).default.fetch as (req: Request) => Promise<Response>
+    const request = new Request('http://localhost/page')
+    const res = await handler(request)
+
+    expect(res.status).toBe(500)
+    expect(res.headers.get('Content-Type')).toBe('text/html; charset=utf-8')
+  })
+})
