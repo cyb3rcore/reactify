@@ -68,15 +68,16 @@ function buildVirtualModuleList(): string[] {
 export const prefix = /^\/?\$app\//
 
 /**
- * Normalize JSX/TSX file extensions to .js in virtual module IDs.
- * This prevents duplicate module instances when the same source file
- * is imported with different extensions (e.g. ./core.js vs $app/core.jsx),
- * which would cause separate React context instances and broken lookups.
- * The original file content is still found by loadVirtualModule which
- * probes disk extensions on every load.
+ * Strip file extension from virtual module IDs.
+ * Prevents duplicate module instances when the same source file is imported
+ * with different extensions (e.g. ./core.js from within virtual modules vs
+ * $app/core from app code), which would otherwise create separate React
+ * context instances and broken lookups.
+ * loadVirtualModule probes disk extensions on every load, so the bare
+ * name is sufficient for content resolution.
  */
 function normalizeVirtualModuleId(name: string): string {
-  return name.replace(/\.(jsx|tsx)$/, '.js')
+  return name.replace(/\.\w+$/, '')
 }
 
 export async function resolveId(
