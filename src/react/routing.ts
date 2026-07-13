@@ -63,13 +63,13 @@ export function createErrorHandler(
   config: RuntimeConfig,
 ): (error: Error, req: FastifyRequest, reply: FastifyReply) => Promise<FastifyReply> {
   return async (error: Error, req: FastifyRequest, reply: FastifyReply) => {
-    req.log.error(error)
-    // Detect redirect errors — produce 3xx response, not 500 HTML
+    // Detect redirect errors first — produce 3xx response, not 500 HTML
     if (isRedirectError(error)) {
       reply.code(error.status)
       reply.header('Location', error.location)
       return reply.send()
     }
+    req.log.error(error)
     if (config.dev) {
       const message = error instanceof Error ? error.message : String(error)
       const stack = error instanceof Error ? (error.stack ?? '') : ''

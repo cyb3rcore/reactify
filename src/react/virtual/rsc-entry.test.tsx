@@ -234,6 +234,26 @@ describe('redirect from onEnter in RSC handler', () => {
     expect(res.status).toBe(500)
     expect(res.headers.get('Content-Type')).toBe('text/html; charset=utf-8')
   })
+
+  it('server action that triggers redirect returns 302', async () => {
+    process.env.NODE_ENV = 'development'
+
+    routesManifest['/page.tsx'] = () =>
+      Promise.resolve({
+        default: () => null,
+        onEnter: () => {
+          throw new RedirectError('/login', 302)
+        },
+      })
+
+    const mod = await import('./rsc-entry.js')
+    const handler = (mod as any).default.fetch as (req: Request) => Promise<Response>
+    const request = new Request('http://localhost/page_.rsc', { method: 'GET' })
+    const res = await handler(request)
+
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toBe('/login')
+  })
 })
 
 // ---------------------------------------------------------------------------
