@@ -4,6 +4,7 @@ import type { RuntimeConfig } from '../vite/types/options.js'
 import type { ClientRouteArgs, CreateRouteArgs, RouteDefinition } from '../vite/types/route.js'
 import RouteContext from './context.js'
 import { rscStore, setSyncContext } from './rsc-context.js'
+import { isRedirectError } from './redirect.js'
 
 /**
  * Route metadata specific to the React renderer.
@@ -63,6 +64,12 @@ export function createErrorHandler(
 ): (error: Error, req: FastifyRequest, reply: FastifyReply) => Promise<FastifyReply> {
   return async (error: Error, req: FastifyRequest, reply: FastifyReply) => {
     req.log.error(error)
+    // Detect redirect errors — produce 3xx response, not 500 HTML
+    if (isRedirectError(error)) {
+      reply.code(error.status)
+      reply.header('Location', error.location)
+      return reply.send()
+    }
     if (config.dev) {
       const message = error instanceof Error ? error.message : String(error)
       const stack = error instanceof Error ? (error.stack ?? '') : ''
@@ -184,6 +191,9 @@ export async function createRoute(
           Object.assign(reqRoute.data as Record<string, unknown>, result)
         }
       } catch (err: unknown) {
+        if (isRedirectError(err)) {
+          throw err
+        }
         if (config.dev) {
           console.error(err)
         }

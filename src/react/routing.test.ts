@@ -132,6 +132,29 @@ describe('createErrorHandler', () => {
     expect(html).toContain('&lt;script&gt;')
     expect(html).not.toContain('<script>')
   })
+
+  it('detects redirect errors and sends 3xx response', async () => {
+    const { RedirectError } = await import('./redirect.js')
+    const scope = makeScope()
+    const config = { dev: true } as RuntimeConfig
+    const handler = createErrorHandler({}, scope, config)
+    const mockReq = { raw: {}, log: { error: vi.fn() } } as unknown as FastifyRequest
+    const send = vi.fn()
+    const reply = {
+      code: vi.fn().mockReturnThis(),
+      header: vi.fn().mockReturnThis(),
+      send,
+    } as unknown as FastifyReply
+
+    await handler(new RedirectError('/login', 302), mockReq, reply)
+
+    expect(reply.code).toHaveBeenCalledWith(302)
+    expect(reply.header).toHaveBeenCalledWith('Location', '/login')
+    expect(send).toHaveBeenCalled()
+    // No HTML error page body — redirect has no content
+    const sentBody = vi.mocked(send).mock.calls[0]?.[0]
+    expect(sentBody).toBeUndefined()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -274,5 +297,33 @@ describe('createRoute', () => {
       config,
     )
     expect(scope.route.mock.calls[0][0].method).toBe('POST')
+  })
+
+  it('preHandler re-throws redirect errors from onEnter', async () => {
+    const { RedirectError, isRedirectError } = await import('./redirect.js')
+    const onEnter = vi.fn().mockRejectedValue(new RedirectError('/login', 302))
+    const route = { path: '/protected', onEnter }
+    await createRoute(
+      { client, errorHandler: vi.fn(), route: route as never },
+      scope as unknown as FastifyInstance,
+      config,
+    )
+
+    // Extract the onEnter-specific preHandler from the registered route options
+    const preHandlers = vi.mocked(scope.route).mock.calls[0][0]
+      .preHandler as Array<(req: FastifyRequest) => Promise<void>>
+    // The last preHandler should be the onEnter handler (pushed last)
+    const onEnterHandler = preHandlers[preHandlers.length - 1]
+
+    // Mock request with a route object so the handler has reqRoute to work with
+    const mockReq = {
+      raw: {},
+      method: 'GET',
+      url: '/protected',
+    } as unknown as FastifyRequest
+    ;(mockReq as unknown as Record<string, unknown>).route = { data: {} }
+
+    // The handler should re-throw the redirect error (not swallow it)
+    await expect(onEnterHandler(mockReq)).rejects.toThrow(RedirectError)
   })
 })
