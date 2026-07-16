@@ -29,8 +29,6 @@ export interface ImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 's
   position?: string
   params?: Record<string, string | number | boolean>
   preload?: boolean
-  placeholder?: 'blur' | 'empty'
-  blurDataURL?: string
   unoptimized?: boolean
   loader?: Loader
 }
@@ -48,8 +46,6 @@ export default function Image({
   params,
   preload = false,
   loading = 'lazy',
-  placeholder = 'empty',
-  blurDataURL,
   unoptimized = false,
   loader = defaultLoader,
   className,
@@ -80,7 +76,7 @@ export default function Image({
     const parts: string[] = []
     if (fit) parts.push(`fit=${fit}`)
     if (position) parts.push(`pos=${position}`)
-    if (params) parts.push(buildQueryString(params as Record<string, string | number | boolean>))
+    if (params) parts.push(buildQueryString(params))
     return parts.length > 0 ? '&' + parts.join('&') : ''
   }, [fit, position, params])
 
@@ -149,8 +145,8 @@ export default function Image({
         srcSet={srcSet}
         sizes={unoptimized ? undefined : sizes}
         alt={alt}
-        width={isFixed && !fill ? width : undefined}
-        height={isFixed && !fill ? height : undefined}
+        width={!fill ? width : undefined}
+        height={!fill ? height : undefined}
         loading={resolvedLoading}
         decoding={decoding}
         className={className}
