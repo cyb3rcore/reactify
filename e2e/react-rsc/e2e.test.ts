@@ -68,7 +68,7 @@ test.describe('RSC e2e', () => {
     page.on('pageerror', (err) => errors.push(err.message))
 
     await page.goto(`${BASE_URL}/error`)
-    await expect(page.getByText('RSC error boundary test')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('RSC error boundary test').first()).toBeVisible({ timeout: 10000 })
     expect(errors).toEqual([])
   })
 
