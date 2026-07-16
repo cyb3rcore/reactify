@@ -62,7 +62,9 @@ describe('Link', () => {
   it('does not prefetch when prefetch=false', () => {
     render(
       <RouteProvider routes={testRoutes} location="/">
-        <Link to="/about" prefetch={false}>About</Link>
+        <Link to="/about" prefetch={false}>
+          About
+        </Link>
       </RouteProvider>,
     )
     const link = screen.getByText('About')

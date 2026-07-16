@@ -135,6 +135,66 @@ describe('renderErrorPage', () => {
   })
 })
 
+describe('tryEnhanceRscHookError', () => {
+  let tryEnhanceRscHookError: (error: unknown) => Error | null
+
+  beforeAll(async () => {
+    const mod = await import('./rsc-entry.js')
+    tryEnhanceRscHookError = mod.tryEnhanceRscHookError
+  })
+
+  it('enhances useMemo in RSC error with use client guidance', () => {
+    const err = new TypeError("Cannot read properties of null (reading 'useMemo')")
+    err.stack =
+      'TypeError: ...\n    at StyledComponent (file.tsx:10:20)\n    at renderFunctionComponent (...)'
+
+    const enhanced = tryEnhanceRscHookError(err)
+
+    expect(enhanced).toBeInstanceOf(Error)
+    expect(enhanced!.message).toContain('useMemo')
+    expect(enhanced!.message).toContain("'use client'")
+    expect(enhanced!.message).toContain('StyledComponent')
+    expect(enhanced!.stack).toBe(err.stack)
+  })
+
+  it('enhances useState in RSC error', () => {
+    const err = new TypeError("Cannot read properties of null (reading 'useState')")
+    err.stack = 'TypeError: ...\n    at MyComponent (app.tsx:5:10)'
+
+    const enhanced = tryEnhanceRscHookError(err)
+
+    expect(enhanced).toBeInstanceOf(Error)
+    expect(enhanced!.message).toContain('useState')
+    expect(enhanced!.message).toContain("'use client'")
+  })
+
+  it('returns null for regular errors', () => {
+    const err = new Error('something went wrong')
+    expect(tryEnhanceRscHookError(err)).toBeNull()
+  })
+
+  it('returns null for TypeError without hook pattern', () => {
+    const err = new TypeError("Cannot read properties of undefined (reading 'foo')")
+    expect(tryEnhanceRscHookError(err)).toBeNull()
+  })
+
+  it('returns null for non-Error values', () => {
+    expect(tryEnhanceRscHookError(null)).toBeNull()
+    expect(tryEnhanceRscHookError('string error')).toBeNull()
+  })
+
+  it('preserves original error name and stack', () => {
+    const err = new TypeError("Cannot read properties of null (reading 'useEffect')")
+    const stack = 'TypeError: ...\n    at Component (file.tsx:1:1)'
+    err.stack = stack
+
+    const enhanced = tryEnhanceRscHookError(err)!
+
+    expect(enhanced.name).toBe('TypeError')
+    expect(enhanced.stack).toBe(stack)
+  })
+})
+
 // ---------------------------------------------------------------------------
 // handler — integration smoke test for catch block
 // ---------------------------------------------------------------------------

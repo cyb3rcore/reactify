@@ -52,7 +52,8 @@ function loadHtmlTemplate(): string {
         // (only to HTML files served through Vite's dev server middleware).
         // Without this inline script, @vitejs/plugin-react's $RefreshSig$()
         // wrapper throws during ESM evaluation and mount.tsx never runs.
-        const preamble = '<script>window.__vite_plugin_react_preamble_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(t)=>t</script>'
+        const preamble =
+          '<script>window.__vite_plugin_react_preamble_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(t)=>t</script>'
         // Inject before </body> — same position as the fallback template.
         // Must run synchronously before <script type="module"> evaluates.
         template = template.replace('</body>', preamble + '\n</body>')
@@ -125,7 +126,11 @@ async function readRSCPayload(rscBody: ReadableStream<Uint8Array>): Promise<stri
  * @param serverResponse - The RSC flight response from rsc-entry's handler
  * @returns A streaming HTML Response
  */
-export async function generateHTML(request: Request, serverResponse: Response, routes: RouteDef[]): Promise<Response> {
+export async function generateHTML(
+  request: Request,
+  serverResponse: Response,
+  routes: RouteDef[],
+): Promise<Response> {
   // Handle redirects — pass through if the RSC response is a redirect
   if (serverResponse.status >= 300 && serverResponse.status < 400) {
     return serverResponse
@@ -171,7 +176,8 @@ export async function generateHTML(request: Request, serverResponse: Response, r
       bootstrapScriptContent,
       formState: rscPayload?.formState as import('react-dom/client').ReactFormState | undefined,
       signal: request.signal,
-    })
+    },
+  )
 
   const decoder = new TextDecoder()
   const encoder = new TextEncoder()

@@ -122,7 +122,9 @@ describe('getRouteModuleExports', () => {
       getData: async () => ({}),
       rsc: true,
     }
-    expect(() => getRouteModuleExports(mod as Record<string, unknown>)).toThrow('mutually exclusive')
+    expect(() => getRouteModuleExports(mod as Record<string, unknown>)).toThrow(
+      'mutually exclusive',
+    )
   })
 
   it('handles modules with no lifecycle hooks', () => {

@@ -62,7 +62,9 @@ export function useParams() {
   if (isServer) {
     const syncCtx = (globalThis as Record<symbol, unknown>)[RSC_SYNC_CTX]
     if (syncCtx && typeof syncCtx === 'object') {
-      const rscParams = (syncCtx as Record<string, unknown>).params as Record<string, string> | undefined
+      const rscParams = (syncCtx as Record<string, unknown>).params as
+        | Record<string, string>
+        | undefined
       if (rscParams) return rscParams
     }
   }
@@ -145,7 +147,10 @@ export function RouteProvider({
 
     const loadData = async () => {
       const route = match.route!
-      console.log('[RouteProvider] loadData', location.pathname, { hasGetData: !!route.getData, routeType: route.rsc ? 'rsc' : 'csr' })
+      console.log('[RouteProvider] loadData', location.pathname, {
+        hasGetData: !!route.getData,
+        routeType: route.rsc ? 'rsc' : 'csr',
+      })
       const state: Record<string, unknown> = { data: {} }
 
       if (route.getData) {

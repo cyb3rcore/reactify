@@ -51,7 +51,9 @@ describe('isRedirectError', () => {
   })
 
   it('returns true for duck-typed objects with the digest', () => {
-    expect(isRedirectError({ digest: '__reactify_redirect__', location: '/', status: 302 })).toBe(true)
+    expect(isRedirectError({ digest: '__reactify_redirect__', location: '/', status: 302 })).toBe(
+      true,
+    )
   })
 
   it('returns false for regular errors', () => {

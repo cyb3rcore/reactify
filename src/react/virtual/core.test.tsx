@@ -229,7 +229,9 @@ if (origReload) {
     configurable: true,
     enumerable: true,
     writable: true,
-    value: () => { reloadCount++ },
+    value: () => {
+      reloadCount++
+    },
   })
 }
 
@@ -318,14 +320,12 @@ describe('navigate', () => {
 
   // When navigating to an RSC route, expect no full page reload
   it('navigate to RSC route does not reload', () => {
-    const rscRoutes = [
-      ...testRoutes,
-      { path: '/rsc-page', rsc: true },
-    ]
+    const rscRoutes = [...testRoutes, { path: '/rsc-page', rsc: true }]
     function TestComponent() {
       const { location, navigate } = useRouteContext()
       return React.createElement(
-        'div', null,
+        'div',
+        null,
         React.createElement('span', { 'data-testid': 'path' }, location.pathname),
         React.createElement('button', { onClick: () => navigate('/rsc-page') }, 'Go RSC'),
       )
@@ -335,21 +335,21 @@ describe('navigate', () => {
         <TestComponent />
       </RouteProvider>,
     )
-    act(() => { screen.getByText('Go RSC').click() })
+    act(() => {
+      screen.getByText('Go RSC').click()
+    })
     expect(screen.getByTestId('path').textContent).toBe('/rsc-page')
     expect(reloadCount).toBe(0)
   })
 
   // When popstate fires for an RSC route, expect no full page reload
   it('popstate for RSC route does not reload', () => {
-    const rscRoutes = [
-      ...testRoutes,
-      { path: '/rsc-page', rsc: true },
-    ]
+    const rscRoutes = [...testRoutes, { path: '/rsc-page', rsc: true }]
     function TestComponent() {
       const { location } = useRouteContext()
       return React.createElement(
-        'div', null,
+        'div',
+        null,
         React.createElement('span', { 'data-testid': 'path' }, location.pathname),
       )
     }
