@@ -1,4 +1,4 @@
-import { getServer } from 'reactify/server'
+import { getServer } from '@cyb3rcore/reactify/server'
 
 export const rsc = true
 

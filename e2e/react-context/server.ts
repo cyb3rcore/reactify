@@ -1,6 +1,6 @@
 import Fastify from 'fastify'
-import reactify from 'reactify'
-import * as renderer from 'reactify/renderer'
+import reactify from '@cyb3rcore/reactify'
+import * as renderer from '@cyb3rcore/reactify/renderer'
 
 export async function main(dev?: boolean) {
   const server = Fastify()
