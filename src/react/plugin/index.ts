@@ -282,6 +282,7 @@ async function load(
     return {
       code: [
         `export { default as Link } from '/$app/link.js'`,
+        `export { default as Image } from '/$app/image.js'`,
         `export { RouteProvider } from '/$app/core.js'`,
         `export { RouteRenderer } from '/$app/root.js'`,
       ].join('\n'),
