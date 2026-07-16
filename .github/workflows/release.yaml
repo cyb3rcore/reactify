@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_TOKEN }}
 
       - uses: pnpm/action-setup@v4
 
@@ -37,6 +39,9 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: pnpm changeset publish
+          commit: "chore: version bump"
+          title: "chore: release"
+          github-token: ${{ secrets.GH_TOKEN }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
