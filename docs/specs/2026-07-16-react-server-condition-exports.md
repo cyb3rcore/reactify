@@ -59,13 +59,22 @@ No tsconfig changes — `rootDir: "src"` covers all new paths.
 - isRedirectError   from ../react/redirect.js
 ```
 
-**`src/react-server.ts`** — NEW, only what's safe in an RSC server component:
+**`src/react-server.ts`** — NEW entry for the `"react-server"` condition on `"."`.
+Exports everything from the default entry except the Vite plugin (which uses
+Node.js built-in modules). **Must include client components** because the RSC
+bundler resolves bare imports through this condition and needs to discover
+all exports to create proper client reference boundaries from `'use client'`
+directives in leaf modules.
 ```
+- Link              from ./react/virtual/link.js
+- Image             from ./react/virtual/image.js
+- RouteProvider     from ./react/virtual/core.js
+- RouteRenderer     from ./react/virtual/root.js
 - redirect          from ./react/redirect.js
 - isRedirectError   from ./react/redirect.js
 ```
 
-Not included: `reactifyVite` (Vite plugin, not an RSC concern), client components.
+Not included: `reactifyVite` (Vite plugin, not an RSC concern).
 
 ### Updated existing files
 
