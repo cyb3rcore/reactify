@@ -195,7 +195,9 @@ test.describe('mixed mode', () => {
     await expect(page.locator('h1')).toHaveText('Mixed Mode Home')
 
     let sawEmptyState = false
-    await page.exposeFunction('__observeFlash', () => { sawEmptyState = true })
+    await page.exposeFunction('__observeFlash', () => {
+      sawEmptyState = true
+    })
 
     // Click to navigate to RSC page
     await page.click('a[href="/rsc-page"]')

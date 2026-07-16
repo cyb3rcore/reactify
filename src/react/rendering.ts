@@ -34,11 +34,11 @@ function ensureReactRequire(consumerRoot?: string): ReturnType<typeof createRequ
   return _reactRequire
 }
 
-function getCreateElement(): typeof import('react')['createElement'] {
+function getCreateElement(): (typeof import('react'))['createElement'] {
   return ensureReactRequire()('react').createElement
 }
 
-function getRenderToReadableStream(): typeof import('react-dom/server')['renderToReadableStream'] {
+function getRenderToReadableStream(): (typeof import('react-dom/server'))['renderToReadableStream'] {
   return ensureReactRequire()('react-dom/server').renderToReadableStream
 }
 

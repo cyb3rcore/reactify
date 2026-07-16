@@ -142,7 +142,7 @@ export function getRouteModuleExports(routeModule: Record<string, unknown>): Rou
   if (routeModule.rsc && routeModule.getData) {
     throw new Error(
       `Route exports both rsc: true and getData() — these are mutually exclusive. ` +
-      `Use server components for data fetching in RSC routes instead of getData.`,
+        `Use server components for data fetching in RSC routes instead of getData.`,
     )
   }
   return {

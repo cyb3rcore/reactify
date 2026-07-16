@@ -133,7 +133,9 @@ class ReactifyViteDecoration implements ReactifyViteDecorationPriorToSetup {
         if (this.runtimeConfig.dev) {
           const hotSymbol = this[kMode].hot!
           const hmrClient = (): ClientModule | undefined =>
-            getSymbolState<{ client?: ClientModule | null }>(this.scope, hotSymbol)?.client ?? client ?? undefined
+            getSymbolState<{ client?: ClientModule | null }>(this.scope, hotSymbol)?.client ??
+            client ??
+            undefined
           const hmrRoute = () =>
             getSymbolState<{ routeHash?: Map<string, RouteDefinition> }>(
               this.scope,

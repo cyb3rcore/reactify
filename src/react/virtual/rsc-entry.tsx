@@ -34,6 +34,51 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Detect errors caused by using React client hooks (useState, useMemo, etc.)
+ * inside a Server Component, where those APIs are null.
+ *
+ * When detected, returns an enhanced error with a clear message suggesting
+ * the `'use client'` directive — similar to Next.js's helpful RSC errors.
+ * Returns null if the error doesn't match the hook-in-RSC pattern.
+ */
+export function tryEnhanceRscHookError(error: unknown): Error | null {
+  if (!(error instanceof Error)) return null
+
+  const match = error.message.match(/Cannot read properties of null \(reading '(use\w+)'\)/)
+  if (!match) return null
+
+  const hookName = match[1]
+  const stack = error.stack ?? ''
+
+  // Find the first user-land frame in the stack trace (skip node_modules/react-server-dom etc.)
+  const userFrame = stack
+    .split('\n')
+    .find(
+      (line) =>
+        line.includes(' at ') &&
+        !line.includes('/node_modules/') &&
+        !line.includes('react-server-dom-'),
+    )
+
+  const componentHint = userFrame ? userFrame.trim() : 'a component'
+
+  const enhanced = [
+    `\`${hookName}\` is not available in Server Components.`,
+    `Add \`'use client'\` at the top of the file that defines ${componentHint}`,
+    `to use client-side React APIs like \`${hookName}\`.`,
+    '',
+    `Original error: ${error.message}`,
+  ].join('\n')
+
+  // Return a new error that preserves the original name and stack trace
+  // so renderErrorPage can display the full picture
+  const enhancedError = new Error(enhanced)
+  enhancedError.name = error.name
+  enhancedError.stack = error.stack
+  return enhancedError
+}
+
+/**
  * Render an HTML error page for development or production.
  *
  * - **Dev mode** (`NODE_ENV !== 'production'`): Shows error name, message,
@@ -52,9 +97,19 @@ export function renderErrorPage(error: unknown): Response {
   if (isDev) {
     const errorName = error instanceof Error ? error.name : 'Error'
     const errorStack = error instanceof Error ? (error.stack ?? '') : ''
-    html = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>500 — ' + escapeHtml(errorMessage) + '</title>\n<style>\nbody{font-family:ui-monospace,monospace;background:#0d1117;color:#e6edf3;padding:2rem;max-width:960px;margin:0 auto}\nh1{color:#f85149;font-size:1.5rem;border-bottom:1px solid #30363d;padding-bottom:.5rem}\n.summary{margin:1rem 0;padding:1rem;background:#161b22;border-radius:6px;border:1px solid #30363d}\n.stack{background:#161b22;border-radius:6px;border:1px solid #30363d;overflow-x:auto}\n.stack pre{margin:0;padding:1rem;font-size:.85rem;line-height:1.5}\n</style>\n</head>\n<body>\n<h1>500 — ' + escapeHtml(errorName) + '</h1>\n<div class="summary"><strong>' + escapeHtml(errorMessage) + '</strong></div>\n<div class="stack"><pre>' + escapeHtml(errorStack) + '</pre></div>\n</body>\n</html>'
+    html =
+      '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>500 — ' +
+      escapeHtml(errorMessage) +
+      '</title>\n<style>\nbody{font-family:ui-monospace,monospace;background:#0d1117;color:#e6edf3;padding:2rem;max-width:960px;margin:0 auto}\nh1{color:#f85149;font-size:1.5rem;border-bottom:1px solid #30363d;padding-bottom:.5rem}\n.summary{margin:1rem 0;padding:1rem;background:#161b22;border-radius:6px;border:1px solid #30363d}\n.stack{background:#161b22;border-radius:6px;border:1px solid #30363d;overflow-x:auto}\n.stack pre{margin:0;padding:1rem;font-size:.85rem;line-height:1.5}\n</style>\n</head>\n<body>\n<h1>500 — ' +
+      escapeHtml(errorName) +
+      '</h1>\n<div class="summary"><strong>' +
+      escapeHtml(errorMessage) +
+      '</strong></div>\n<div class="stack"><pre>' +
+      escapeHtml(errorStack) +
+      '</pre></div>\n</body>\n</html>'
   } else {
-    html = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>500 — Internal Server Error</title>\n</head>\n<body>\n<h1>500 — Internal Server Error</h1>\n</body>\n</html>'
+    html =
+      '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>500 — Internal Server Error</title>\n</head>\n<body>\n<h1>500 — Internal Server Error</h1>\n</body>\n</html>'
   }
   return new Response(html, {
     status: error instanceof Error && 'status' in error ? (error as any).status || 500 : 500,
@@ -269,7 +324,9 @@ async function handler(request: Request): Promise<Response> {
       req: rscRequest.__req,
       server: rscRequest.__server,
       reply: rscRequest.__reply,
-      params: (rscRequest.__req as unknown as Record<string, unknown>).params as Record<string, string> | undefined,
+      params: (rscRequest.__req as unknown as Record<string, unknown>).params as
+        | Record<string, string>
+        | undefined,
     } as import('../rsc-context.js').RscContext)
   }
 
@@ -411,7 +468,9 @@ async function handler(request: Request): Promise<Response> {
     // Create a React element from the route module's default export.
     // pageModule is narrowed to PageModule by the isPageModule guard above,
     // so default is already ComponentType<...> | undefined.
-    const element: ReactNode = pageModule.default ? createElement(pageModule.default, { params: matchResult.params }) : null
+    const element: ReactNode = pageModule.default
+      ? createElement(pageModule.default, { params: matchResult.params })
+      : null
 
     // Do NOT clear __rsc_formState here — the element created above is a
     // React element (createElement does NOT invoke the component function).
@@ -462,7 +521,11 @@ async function handler(request: Request): Promise<Response> {
 
     // Delegate to SSR environment for full document (HTML) requests
     const ssrEntry = await import.meta.viteRsc.import<{
-      generateHTML: (request: Request, rscResponse: Response, routes: RouteDef[]) => Promise<Response>
+      generateHTML: (
+        request: Request,
+        rscResponse: Response,
+        routes: RouteDef[],
+      ) => Promise<Response>
     }>('./ssr-entry.js', { environment: 'ssr' })
     const htmlResult = await ssrEntry.generateHTML(request, rscResponse.clone(), routeDefs)
 
@@ -482,6 +545,10 @@ async function handler(request: Request): Promise<Response> {
       })
     }
 
+    // Enhance hook-in-RSC errors with 'use client' guidance (dev only)
+    const enhancedError = tryEnhanceRscHookError(error)
+    const displayError = enhancedError ?? error
+
     // Log the error for server-side debugging
     const loggable =
       error instanceof Error
@@ -489,7 +556,7 @@ async function handler(request: Request): Promise<Response> {
         : String(error)
     console.error('[rsc-entry] handler error:', loggable)
 
-    return renderErrorPage(error)
+    return renderErrorPage(displayError)
   }
 }
 

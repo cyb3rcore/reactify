@@ -4,12 +4,14 @@ import { render, screen, act } from '@testing-library/react'
 import React from 'react'
 
 // Hoisted mock references for per-test control
-const { mockCreateFromFetch, mockSetServerCallback, mockConsumePrefetch, mockFetch } = vi.hoisted(() => ({
-  mockCreateFromFetch: vi.fn(),
-  mockSetServerCallback: vi.fn(),
-  mockConsumePrefetch: vi.fn(),
-  mockFetch: vi.fn(),
-}))
+const { mockCreateFromFetch, mockSetServerCallback, mockConsumePrefetch, mockFetch } = vi.hoisted(
+  () => ({
+    mockCreateFromFetch: vi.fn(),
+    mockSetServerCallback: vi.fn(),
+    mockConsumePrefetch: vi.fn(),
+    mockFetch: vi.fn(),
+  }),
+)
 
 // Mock global fetch to prevent URL parse errors from '/_.rsc' relative URLs
 globalThis.fetch = mockFetch as unknown as typeof globalThis.fetch
@@ -33,7 +35,9 @@ describe('RscSlot', () => {
     // Default: createFromFetch returns a simple fallback
     mockCreateFromFetch.mockReturnValue(
       Promise.resolve({
-        matches: [{ element: React.createElement('div', { 'data-testid': 'fallback' }, 'Fallback') }],
+        matches: [
+          { element: React.createElement('div', { 'data-testid': 'fallback' }, 'Fallback') },
+        ],
         head: { title: 'Fallback' },
       }),
     )
@@ -63,10 +67,13 @@ describe('RscSlot', () => {
   })
 
   it('fetches on navigation when no cache hit', async () => {
-    const [{ RouteProvider, useNavigate }, { default: RscSlot }] = await Promise.all([
+    const [{ RouteProvider, useNavigate }, { default: RscSlot }] = (await Promise.all([
       import('./core.js'),
       import('./rsc-content.js'),
-    ]) as [typeof import('./core.js'), { default: React.ComponentType<{ initialPayload?: unknown }> }]
+    ])) as [
+      typeof import('./core.js'),
+      { default: React.ComponentType<{ initialPayload?: unknown }> },
+    ]
 
     // Ensure no cache hit (default mock already returns undefined)
     mockConsumePrefetch.mockReturnValue(undefined)
@@ -83,7 +90,9 @@ describe('RscSlot', () => {
     await act(async () => {
       render(
         <RouteProvider routes={[{ path: '[...path]', rsc: true }]} location="/">
-          <RscSlot initialPayload={{ matches: [{ element: React.createElement('div', null, 'Initial') }] }} />
+          <RscSlot
+            initialPayload={{ matches: [{ element: React.createElement('div', null, 'Initial') }] }}
+          />
           <NavCapture />
         </RouteProvider>,
       )
@@ -128,10 +137,12 @@ describe('RscSlot', () => {
     await act(async () => {
       render(
         <RouteProvider routes={[{ path: '/', rsc: true }]} location="/">
-          <RscSlot initialPayload={{
-            matches: [{ element: React.createElement('div', null, 'Hello') }],
-            head: { title: 'Page Title' },
-          }} />
+          <RscSlot
+            initialPayload={{
+              matches: [{ element: React.createElement('div', null, 'Hello') }],
+              head: { title: 'Page Title' },
+            }}
+          />
         </RouteProvider>,
       )
     })

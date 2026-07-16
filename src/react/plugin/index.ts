@@ -161,10 +161,12 @@ export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plug
             return { id: '\0reactify:client-stub' }
           }
           // Safety net: prevent any vite config module from reaching the client
-          if (id.includes('/dist/vite/config/') ||
-              id.endsWith('/dist/vite/config.js') ||
-              id.endsWith('/dist/vite/index.js') ||
-              id.endsWith('/dist/vite/plugin.js')) {
+          if (
+            id.includes('/dist/vite/config/') ||
+            id.endsWith('/dist/vite/config.js') ||
+            id.endsWith('/dist/vite/index.js') ||
+            id.endsWith('/dist/vite/plugin.js')
+          ) {
             return { id: '\0reactify:vite-config-stub' }
           }
         }
@@ -189,7 +191,7 @@ export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plug
         // here would cause Rolldown to attempt file-system lookup.
         return resolveId.call(context, id, importer)
       },
-      load: load,  // NOT bound — needs this.environment from Vite's PluginContext
+      load: load, // NOT bound — needs this.environment from Vite's PluginContext
       transform: {
         order: 'pre' as const,
         handler(code: string, id: string) {
@@ -541,7 +543,9 @@ function config(
 
   for (const alias of requiredAliases) {
     // Top-level resolve
-    const topAliases = ((rawConfig.resolve as Record<string, unknown>)?.alias ?? []) as Array<Record<string, unknown>>
+    const topAliases = ((rawConfig.resolve as Record<string, unknown>)?.alias ?? []) as Array<
+      Record<string, unknown>
+    >
     if (!topAliases.some((a: Record<string, unknown>) => a.find === alias.find)) {
       rawConfig.resolve = {
         ...(rawConfig.resolve as Record<string, unknown>),

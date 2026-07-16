@@ -38,11 +38,7 @@ export default function Link({ to, children, prefetch = 'hover' }: LinkProps) {
   )
 
   return (
-    <a
-      href={to}
-      onClick={handleClick}
-      onMouseEnter={prefetch !== false ? doPrefetch : undefined}
-    >
+    <a href={to} onClick={handleClick} onMouseEnter={prefetch !== false ? doPrefetch : undefined}>
       {children}
     </a>
   )

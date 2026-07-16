@@ -3,9 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock createFromFetch so we don't need real network calls
 vi.mock('@vitejs/plugin-rsc/browser', () => ({
-  createFromFetch: vi.fn((fetchPromise: Promise<Response>) =>
-    fetchPromise.then((r) => r.json()),
-  ),
+  createFromFetch: vi.fn((fetchPromise: Promise<Response>) => fetchPromise.then((r) => r.json())),
 }))
 
 // Provide a global fetch so prefetchRsc can call it without hitting the network

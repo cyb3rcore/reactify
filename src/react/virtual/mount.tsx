@@ -79,10 +79,7 @@ export async function mount(routes: RouteDef[], rootId = 'root') {
   hydrateRoot(
     targetElem,
     <StrictMode>
-      <RouteProvider
-        routes={routes}
-        location={window.location.pathname + window.location.search}
-      >
+      <RouteProvider routes={routes} location={window.location.pathname + window.location.search}>
         <RouteRenderer initialPayload={initialPayload} />
       </RouteProvider>
     </StrictMode>,

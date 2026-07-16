@@ -310,8 +310,9 @@ describe('createRoute', () => {
     )
 
     // Extract the onEnter-specific preHandler from the registered route options
-    const preHandlers = vi.mocked(scope.route).mock.calls[0][0]
-      .preHandler as Array<(req: FastifyRequest) => Promise<void>>
+    const preHandlers = vi.mocked(scope.route).mock.calls[0][0].preHandler as Array<
+      (req: FastifyRequest) => Promise<void>
+    >
     // The last preHandler should be the onEnter handler (pushed last)
     const onEnterHandler = preHandlers[preHandlers.length - 1]
 
