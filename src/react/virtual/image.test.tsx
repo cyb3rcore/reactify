@@ -19,9 +19,7 @@ describe('Image', () => {
   })
 
   it('generates responsive srcset with w-descriptors when sizes provided', () => {
-    const { container } = render(
-      <Image src="photo.jpg" alt="test" sizes="100vw" />,
-    )
+    const { container } = render(<Image src="photo.jpg" alt="test" sizes="100vw" />)
     const img = container.querySelector('img')!
     const srcset = img.getAttribute('srcset')
     expect(srcset).toContain('photo.jpg?w=640&q=80 640w')
@@ -30,9 +28,7 @@ describe('Image', () => {
   })
 
   it('generates fixed srcset with x-descriptors when width provided', () => {
-    const { container } = render(
-      <Image src="photo.jpg" alt="test" width={400} />,
-    )
+    const { container } = render(<Image src="photo.jpg" alt="test" width={400} />)
     const img = container.querySelector('img')!
     const srcset = img.getAttribute('srcset')
     expect(srcset).toContain('photo.jpg?w=400&q=80 1x')
@@ -99,27 +95,21 @@ describe('Image', () => {
   })
 
   it('uses unoptimized src as-is when unoptimized=true', () => {
-    const { container } = render(
-      <Image src="photo.jpg" alt="test" unoptimized />,
-    )
+    const { container } = render(<Image src="photo.jpg" alt="test" unoptimized />)
     const img = container.querySelector('img')!
     expect(img.getAttribute('src')).toBe('photo.jpg')
     expect(img.getAttribute('srcset')).toBeFalsy()
   })
 
   it('fill mode sets absolute positioning styles', () => {
-    const { container } = render(
-      <Image src="photo.jpg" alt="test" fill />,
-    )
+    const { container } = render(<Image src="photo.jpg" alt="test" fill />)
     const img = container.querySelector('img')!
     expect(img.getAttribute('style')).toContain('position: absolute')
     expect(img.getAttribute('style')).toContain('inset: 0')
   })
 
   it('sets quality in generated URLs', () => {
-    const { container } = render(
-      <Image src="photo.jpg" alt="test" width={200} quality={50} />,
-    )
+    const { container } = render(<Image src="photo.jpg" alt="test" width={200} quality={50} />)
     const img = container.querySelector('img')!
     expect(img.getAttribute('src')).toContain('q=50')
   })

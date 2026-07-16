@@ -39,8 +39,8 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: pnpm changeset publish
-          commit: "chore: version bump"
-          title: "chore: release"
+          commit: 'chore: version bump'
+          title: 'chore: release'
           github-token: ${{ secrets.GH_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}

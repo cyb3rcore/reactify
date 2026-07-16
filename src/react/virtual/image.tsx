@@ -17,7 +17,10 @@ function buildQueryString(params: Record<string, string | number | boolean>): st
     .join('&')
 }
 
-export interface ImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSet' | 'width' | 'height'> {
+export interface ImageProps extends Omit<
+  ImgHTMLAttributes<HTMLImageElement>,
+  'src' | 'srcSet' | 'width' | 'height'
+> {
   src: string
   alt: string
   width?: number
@@ -67,7 +70,7 @@ export default function Image({
     if (unoptimized) return []
     if (isFixed) {
       // Next.js rationale: 3x is wasteful on OLED, 2x is the practical ceiling
-      return [width, width * 2].filter(w => w <= DEVICE_SIZES[DEVICE_SIZES.length - 1])
+      return [width, width * 2].filter((w) => w <= DEVICE_SIZES[DEVICE_SIZES.length - 1])
     }
     return DEVICE_SIZES
   }, [unoptimized, isFixed, width])
@@ -83,7 +86,7 @@ export default function Image({
   const srcSet = useMemo(() => {
     if (unoptimized || widths.length === 0) return undefined
     return widths
-      .map(w => {
+      .map((w) => {
         const url = loader({ src, width: w, quality })
         return `${url}${queryExtraStr}${isFixed ? ` ${w / width}x` : ` ${w}w`}`
       })
@@ -94,9 +97,7 @@ export default function Image({
   // For fixed mode: use 1x width (intended display size)
   const mainSrc = useMemo(() => {
     if (unoptimized) return src
-    const w = isFixed
-      ? (widths[0] ?? width)
-      : (widths[Math.floor(widths.length / 2)] ?? widths[0])
+    const w = isFixed ? (widths[0] ?? width) : (widths[Math.floor(widths.length / 2)] ?? widths[0])
     return loader({ src, width: w, quality }) + queryExtraStr
   }, [unoptimized, src, loader, widths, isFixed, width, quality, queryExtraStr])
 
@@ -104,14 +105,7 @@ export default function Image({
   const preloadLink = useMemo(() => {
     if (!preload || unoptimized) return null
     if (sizes && srcSet) {
-      return (
-        <link
-          rel="preload"
-          as="image"
-          imageSrcSet={srcSet}
-          imageSizes={sizes}
-        />
-      )
+      return <link rel="preload" as="image" imageSrcSet={srcSet} imageSizes={sizes} />
     }
     return <link rel="preload" as="image" href={mainSrc} />
   }, [preload, unoptimized, srcSet, sizes, mainSrc])

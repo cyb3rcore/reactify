@@ -11,7 +11,9 @@ export default function LinkDemo() {
       <nav>
         <Link to="/rsc-page">RSC Page</Link>
         <Link to="/about">About</Link>
-        <Link to="/rsc-page" prefetch={false}>RSC (no prefetch)</Link>
+        <Link to="/rsc-page" prefetch={false}>
+          RSC (no prefetch)
+        </Link>
       </nav>
     </div>
   )
