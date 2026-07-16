@@ -1,4 +1,4 @@
-import { getReq } from 'reactify/server'
+import { getReq } from '@cyb3rcore/reactify/server'
 
 export const rsc = true
 

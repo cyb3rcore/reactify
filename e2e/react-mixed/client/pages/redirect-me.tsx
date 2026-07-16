@@ -1,4 +1,4 @@
-import { redirect } from 'reactify'
+import { redirect } from '@cyb3rcore/reactify'
 
 export const rsc = true
 
