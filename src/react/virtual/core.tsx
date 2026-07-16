@@ -168,6 +168,26 @@ export function RouteProvider({
     loadData()
   }, [location.pathname])
 
+  // Update document title on navigation for non-RSC routes.
+  // For RSC routes, RscSlot handles this via the flight payload.
+  // For SSR routes during SPA navigation, load the page module's
+  // getMeta to restore the document title (lost after previous
+  // RSC navigation mutated it).
+  useEffect(() => {
+    const route = match.route
+    if (!route || route.rsc) return
+    if (typeof route.getMeta !== 'function') return
+
+    route
+      .getMeta({ url: new URL(window.location.href) })
+      .then((head: Record<string, unknown>) => {
+        if (head?.title && typeof head.title === 'string') {
+          document.title = head.title
+        }
+      })
+      .catch(() => {})
+  }, [location.pathname])
+
   // Client-side: listen to popstate for back/forward
   useEffect(() => {
     const onPop = () => {
