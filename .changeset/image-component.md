@@ -10,10 +10,11 @@ Adds a framework-level `Image` component (same pattern as the existing `Link` co
 
 **Commits:**
 
-- https://github.com/cyb3rcore/reactify/commit/d8eeaab5 — feat: add responsive Image component with srcset generation
-- https://github.com/cyb3rcore/reactify/commit/c88bace5 — feat: register Image as virtual module
-- https://github.com/cyb3rcore/reactify/commit/b100cc5c — fix: remove unused placeholder props, export ImageProps, fix responsive width/height
-- https://github.com/cyb3rcore/reactify/commit/f5fb45eb — fix: use GH_TOKEN for changesets checkout, add github-token input
+- [`d8eeaab5`](https://github.com/cyb3rcore/reactify/commit/d8eeaab5) — feat: add responsive Image component with srcset generation
+- [`c88bace5`](https://github.com/cyb3rcore/reactify/commit/c88bace5) — feat: register Image as virtual module
+- [`b100cc5c`](https://github.com/cyb3rcore/reactify/commit/b100cc5c) — fix: remove unused placeholder props, export ImageProps, fix responsive width/height
+- [`f5fb45eb`](https://github.com/cyb3rcore/reactify/commit/f5fb45eb) — fix: use GH_TOKEN for changesets checkout, add github-token input
+- [`7313f917`](https://github.com/cyb3rcore/reactify/commit/7313f917) — fix: use imageSrcSet/imageSizes camelCase for React JSX
 
 ### Image component features
 
