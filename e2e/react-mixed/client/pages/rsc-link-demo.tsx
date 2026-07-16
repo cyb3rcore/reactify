@@ -1,4 +1,4 @@
-import { Link } from 'reactify'
+import { Link } from '@cyb3rcore/reactify'
 
 export const rsc = true
 
