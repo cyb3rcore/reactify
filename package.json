@@ -53,7 +53,7 @@
     "@fastify/middie": "^9.3.3",
     "@fastify/static": "^9.3.0",
     "@unhead/react": "^2.1.15",
-    "@vitejs/plugin-rsc": "^0.5.27",
+    "@vitejs/plugin-rsc": "0.5.27",
     "acorn": "^8.17.0",
     "acorn-strip-function": "^1.2.0",
     "acorn-walk": "^8.3.5",
