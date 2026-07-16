@@ -65,13 +65,16 @@ describe('Image', () => {
     expect(onLoad).toHaveBeenCalledTimes(1)
   })
 
-  it('allow-pass through onLoad when src changes', () => {
+  it('allows onLoad pass-through when src changes', () => {
     const onLoad = vi.fn()
     const { container, rerender } = render(<Image src="photo.jpg" alt="test" onLoad={onLoad} />)
     const img = container.querySelector('img')!
     img.dispatchEvent(new Event('load'))
     expect(onLoad).toHaveBeenCalledTimes(1)
     rerender(<Image src="photo2.jpg" alt="test" onLoad={onLoad} />)
+    img.dispatchEvent(new Event('load'))
+    expect(onLoad).toHaveBeenCalledTimes(2)
+    // Third dispatch should be deduped (loadedRef reset worked for new src)
     img.dispatchEvent(new Event('load'))
     expect(onLoad).toHaveBeenCalledTimes(2)
   })
