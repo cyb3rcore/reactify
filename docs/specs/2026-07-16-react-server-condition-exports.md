@@ -60,12 +60,12 @@ No tsconfig changes — `rootDir: "src"` covers all new paths.
 ```
 
 **`src/react-server.ts`** — NEW entry for the `"react-server"` condition on `"."`.
-Starts with `'use client'` directive so the RSC plugin's `rsc:use-client` transform
-wraps all exports in `registerClientReference()` — necessary because the RSC
-bundler resolves bare imports through this condition and leaf modules are
-loaded via Node.js native ESM, not the Vite transform pipeline.
+Exports everything from the default entry except the Vite plugin (which uses
+Node.js built-in modules). **Must include client components** because the RSC
+bundler resolves bare imports through this condition and needs to discover
+all exports to create proper client reference boundaries from `'use client'`
+directives in leaf modules.
 ```
-'use client'
 - Link              from ./react/virtual/link.js
 - Image             from ./react/virtual/image.js
 - RouteProvider     from ./react/virtual/core.js
@@ -75,10 +75,6 @@ loaded via Node.js native ESM, not the Vite transform pipeline.
 ```
 
 Not included: `reactifyVite` (Vite plugin, not an RSC concern).
-
-Note: `redirect` and `isRedirectError` are behind `'use client'` in this entry.
-RSC server code that needs to call `redirect()` directly import from
-`@cyb3rcore/reactify/server` instead.
 
 ### Updated existing files
 
