@@ -1,4 +1,4 @@
-import { createContext, useContext, lazy, type ComponentType } from 'react'
+import { createContext, useContext, lazy, type ComponentType, type ReactNode } from 'react'
 import { useSnapshot } from 'valtio'
 
 export interface RouteDef {
@@ -53,6 +53,9 @@ export function hydrateRoutes(
     // layout into a boolean (!!layout), which when spread would override the
     // real layout component with false (causing "Element type is invalid" in
     // RouteRenderer). Keep getData/getMeta/onEnter booleans for navigation.
+    // Instead, capture whether the route had a layout so we can load it from
+    // the page module's named export — matching what the server rendered.
+    const hasLayout = !!entry.layout
     const { layout: _l, ...clean } = entry
     // RSC routes: skip lazy component creation. Server components can import
     // server-only modules (like @cyb3rcore/reactify/server with node:async_hooks)
@@ -62,14 +65,47 @@ export function hydrateRoutes(
       return clean as unknown as RouteDef
     }
     const key = String(entry.id ?? entry.path ?? '')
-    const loader = memoImport<{ default: ComponentType<unknown> }>(
-      loaders[key] as () => Promise<{ default: ComponentType<unknown> }>,
+    const loader = memoImport<Record<string, unknown>>(
+      loaders[key] as () => Promise<Record<string, unknown>>,
     )
-    return {
+    // Build the result with the lazy-loaded component (default export).
+    // Both component and layout live in the same page module — we share
+    // one loader via memoImport so there is only one network request.
+    const result: Record<string, unknown> = {
       ...clean,
       loader,
-      component: lazy(() => loader()),
-    } as unknown as RouteDef
+      component: lazy(() => loader().then(m => ({ default: m.default as ComponentType<unknown> }))),
+    }
+    // For SSR routes with a layout: load the layout named export from the
+    // same page module. This lets RouteRenderer hydrate with the correct
+    // layout wrapper, preventing "server rendered X but client expected Y"
+    // mismatches. The lazy() resolves from the same memoized loader as the
+    // component — no extra fetch.
+    if (hasLayout) {
+      result.layout = lazy(() =>
+        loader().then(m => {
+          const Layout = m.layout as React.ComponentType<{ children: ReactNode }> | undefined
+          if (!Layout) throw new Error('[hydrateRoutes] expected layout export in page module')
+          return { default: Layout }
+        }),
+      )
+    }
+    // Convert getMeta boolean to a callable function for SSR routes.
+    // The serialized metadata has getMeta: true (boolean from Routes.toJSON).
+    // Client-side navigation needs the actual getMeta function to restore
+    // document.title when navigating to non-RSC pages via SPA (the title
+    // set by SSR is lost after an RSC navigation mutated it earlier).
+    if (entry.getMeta) {
+      result.getMeta = async (ctx: Record<string, unknown>) => {
+        const mod = await loader()
+        const metaFn = (mod as Record<string, unknown>).getMeta as
+          | ((ctx: Record<string, unknown>) => Promise<Record<string, unknown>>)
+          | undefined
+        if (typeof metaFn === 'function') return metaFn(ctx)
+        return {}
+      }
+    }
+    return result as unknown as RouteDef
   })
 }
 
