@@ -122,11 +122,17 @@ export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plug
       },
       configResolved: configResolved.bind(context),
       configEnvironment(name: string, options: any) {
-        // Filter react/react-dom from SSR/RSC resolve.noExternal — these must
+        // Filter react/react-dom from SSR resolve.noExternal — these must
         // always be provided by the consumer to avoid duplicate copies.
         // This runs AFTER all plugins' config hooks, so @vitejs/plugin-rsc's
         // additions are guaranteed to be present for us to clean up.
-        if (name === 'ssr' || name === 'rsc') {
+        //
+        // NOTE: The RSC environment deliberately keeps react/react-dom in
+        // noExternal so they are bundled at build time with the react-server
+        // condition (set by @vitejs/plugin-rsc). Externalizing them means
+        // Node.js resolves react without react-server at runtime, causing
+        // React 19 to throw: "The react-server condition must be enabled".
+        if (name === 'ssr') {
           const resolve = options.resolve
           if (resolve && Array.isArray(resolve.noExternal)) {
             const filtered = resolve.noExternal.filter(
