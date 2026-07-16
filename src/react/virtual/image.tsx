@@ -108,8 +108,8 @@ export default function Image({
         <link
           rel="preload"
           as="image"
-          imagesrcset={srcSet}
-          imagesizes={sizes}
+          imageSrcSet={srcSet}
+          imageSizes={sizes}
         />
       )
     }
