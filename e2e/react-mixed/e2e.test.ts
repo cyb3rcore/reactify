@@ -168,7 +168,7 @@ test.describe('mixed mode', () => {
     await page.goto(`${BASE_URL}/rsc-link-demo`)
     await expect(page.locator('h1')).toHaveText('RSC Link Demo')
     await page.getByRole('link', { name: 'Home' }).click()
-    await expect(page.locator('h1')).toHaveText('Link Demo Page')
+    await expect(page.locator('h1')).toHaveText('Mixed Mode Home')
   })
 
   test('prefetch still works after client-side navigation', async ({ page }) => {

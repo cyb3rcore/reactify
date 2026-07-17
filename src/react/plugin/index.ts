@@ -402,6 +402,41 @@ function config(
     },
   }
 
+  // Ensure the reactify package is not externalized and not pre-bundled
+  // in the RSC environment, so @vitejs/plugin-rsc processes its
+  // 'use client' modules (Link, Image, etc.) through the transform pipeline.
+  // The RSC plugin's crawlFrameworkPkgs may not detect packages installed
+  // via file: protocol (pnpm), leaving them externalized and/or pre-bundled.
+  if (reactifyPkgExcludes.length > 0) {
+    const rscEnv = environments.rsc as Record<string, unknown>
+
+    // Add to resolve.noExternal (prevents build-time externalization)
+    const rscResolve = (rscEnv.resolve ?? {}) as Record<string, unknown>
+    let noExternal = rscResolve.noExternal
+    if (!noExternal || !Array.isArray(noExternal)) {
+      noExternal = []
+      rscResolve.noExternal = noExternal
+    }
+    for (const pkgName of reactifyPkgExcludes) {
+      if (!(noExternal as string[]).includes(pkgName)) {
+        (noExternal as string[]).push(pkgName)
+      }
+    }
+
+    // Add to optimizeDeps.exclude (prevents dev-mode pre-bundling)
+    const rscOptDeps = (rscEnv.optimizeDeps ?? {}) as Record<string, unknown>
+    let exclude = rscOptDeps.exclude
+    if (!exclude || !Array.isArray(exclude)) {
+      exclude = []
+      rscOptDeps.exclude = exclude
+    }
+    for (const pkgName of reactifyPkgExcludes) {
+      if (!(exclude as string[]).includes(pkgName)) {
+        (exclude as string[]).push(pkgName)
+      }
+    }
+  }
+
   // Also ensure @vitejs/plugin-rsc is resolvable in the SSR build
   const ssrEnv = environments.ssr as Record<string, unknown> | undefined
   if (ssrEnv) {
