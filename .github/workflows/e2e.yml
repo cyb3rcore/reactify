@@ -52,4 +52,4 @@ jobs:
           done
 
       - name: Run E2E tests
-        run: pnpm test:e2e
+        run: npx playwright test --config e2e/playwright.config.ts
