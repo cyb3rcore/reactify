@@ -40,6 +40,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install e2e fixture dependencies
+        run: |
+          for fixture in e2e/*/; do
+            if [ -f "$fixture/package.json" ]; then
+              (cd "$fixture" && pnpm install --frozen-lockfile)
+            fi
+          done
+
       - name: Build
         run: pnpm build
 
