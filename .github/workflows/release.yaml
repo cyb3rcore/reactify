@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: write
   id-token: write
   issues: write
@@ -17,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for E2E to succeed on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
           echo "Checking E2E status for commit $COMMIT_SHA"
