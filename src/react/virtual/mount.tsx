@@ -2,7 +2,8 @@
 
 import { StrictMode, type ReactNode } from 'react'
 import { hydrateRoot } from 'react-dom/client'
-import { RouteProvider, type RouteDef } from './core.js'
+import { RouteProvider } from './core.js'
+import { type RouteDef } from '../core-shared.js'
 import { RouteRenderer } from './root.js'
 import { hydrateRoutes } from '../client.js'
 import type { RscPayload } from './rsc-content.js'
