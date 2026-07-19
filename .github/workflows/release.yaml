@@ -1,29 +1,72 @@
 name: Release
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 permissions:
   contents: write
   id-token: write
   issues: write
+
 jobs:
   release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for E2E to succeed on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
+          echo "Checking E2E status for commit $COMMIT_SHA"
+
+          for i in $(seq 1 60); do
+            CONCLUSION=$(gh run list \
+              --workflow E2E \
+              --commit "$COMMIT_SHA" \
+              --json conclusion,databaseId \
+              --jq '.[0].conclusion // "pending"' 2>/dev/null)
+
+            case "$CONCLUSION" in
+              success)
+                echo "E2E passed"
+                exit 0
+                ;;
+              failure|cancelled|timed_out)
+                echo "E2E failed: $CONCLUSION"
+                exit 1
+                ;;
+              pending|""|null)
+                echo "E2E still running (attempt $i/60), waiting 30s..."
+                sleep 30
+                ;;
+            esac
+          done
+
+          echo "Timed out waiting for E2E after 30 minutes"
+          exit 1
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
           token: ${{ secrets.GH_TOKEN }}
+
       - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: 'pnpm'
           check-latest: true
+
       - run: pnpm install --frozen-lockfile
+
       - run: pnpm build
+
       - name: Release
         run: npx semantic-release
         env:
