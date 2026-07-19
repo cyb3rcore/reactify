@@ -1,0 +1,3 @@
+Merge pull request #18 from IlyaSemenov/fix/vue-example-ctx
+
+fix(examples/vue-api): fix context -> ctx
