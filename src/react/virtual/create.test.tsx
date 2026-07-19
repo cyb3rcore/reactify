@@ -7,7 +7,7 @@ beforeEach(() => {
 })
 import React from 'react'
 import create from './create.js'
-import { type RouteDef } from './core.js'
+import { type RouteDef } from '../core-shared.js'
 
 const testRoutes: RouteDef[] = [
   { path: '/', component: () => React.createElement('div', { 'data-testid': 'home' }, 'Home') },
