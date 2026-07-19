@@ -80,10 +80,10 @@ async function loadEntries(
   }
 
   const entries: ClientEntries = {}
-  if (viteConfig.fastify?.entryPaths) {
-    for (const [env, entryPath] of Object.entries(viteConfig.fastify.entryPaths)) {
+  if (viteConfig.reactify?.entryPaths) {
+    for (const [env, entryPath] of Object.entries(viteConfig.reactify.entryPaths)) {
       const bundle = await loadBundle(
-        viteConfig.fastify.outDirs![env]!,
+        viteConfig.reactify.outDirs![env]!,
         entryPath,
         config.root,
         config,
@@ -105,8 +105,8 @@ export async function setup(
   let ssrOutDir: string
   let assetsDir: string
 
-  if (viteConfig.fastify?.outDirs) {
-    const { outDirs } = viteConfig.fastify
+  if (viteConfig.reactify?.outDirs) {
+    const { outDirs } = viteConfig.reactify
 
     const { packageDirectory } = await import('package-directory')
     const outDirRoot = await packageDirectory({ cwd: runtimeConfig.root })

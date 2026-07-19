@@ -3,9 +3,9 @@ import { writeFile } from 'node:fs/promises'
 import getDeepMergeFunction from '@fastify/deepmerge'
 import { packageDirectory } from 'package-directory'
 import type { Plugin, ResolvedConfig, UserConfig } from 'vite'
-import type { SerializableViteConfig, ViteFastifyConfig } from './types/vite-configs.js'
+import type { SerializableViteConfig, ViteReactifyConfig } from './types/vite-configs.js'
 
-export interface ViteFastifyPluginOptions {
+export interface ViteReactifyPluginOptions {
   /**
    * Enable SPA mode (no SSR environment)
    */
@@ -17,10 +17,10 @@ export interface ViteFastifyPluginOptions {
 }
 
 /**
- * Vite plugin for Fastify integration.
+ * Vite plugin for Reactify.
  * Configures Vite environments for client and SSR builds.
  */
-export function viteFastify(options: ViteFastifyPluginOptions = {}): Plugin {
+export function viteReactify(options: ViteReactifyPluginOptions = {}): Plugin {
   const { spa, clientModule } = options
   let customOutDir: string | undefined
   let jsonFilePath: string
@@ -28,7 +28,7 @@ export function viteFastify(options: ViteFastifyPluginOptions = {}): Plugin {
   let resolvedConfig: ResolvedConfig
 
   return {
-    name: 'vite-fastify',
+    name: 'vite-reactify',
     enforce: 'pre',
     async config(rawConfig: UserConfig, { mode }): Promise<void> {
       customOutDir = rawConfig.build?.outDir
@@ -75,7 +75,7 @@ export function viteFastify(options: ViteFastifyPluginOptions = {}): Plugin {
 
       resolvedConfig = config
 
-      resolvedConfig.fastify = { clientModule }
+      resolvedConfig.reactify = { clientModule }
 
       // During vite dev, this function can be called multiple times. Sometimes, the resolved
       // configs in these executions are missing many properties. Since there is no advantage to
@@ -93,17 +93,17 @@ export function viteFastify(options: ViteFastifyPluginOptions = {}): Plugin {
 
       // For SSR builds, `vite build` is executed twice: once for client and once for server.
       // We need to merge the two configs and make both `outDir` properties available.
-      const fastify: ViteFastifyConfig = {
+      const reactify: ViteReactifyConfig = {
         outDirs: {},
       }
-      fastify.entryPaths = Object.fromEntries(
+      reactify.entryPaths = Object.fromEntries(
         Object.entries(resolvedConfig.environments)
           .map(([env, envConfig]) => {
             const envBuild = envConfig.build as
               | { outDir?: string; rollupOptions?: { input?: Record<string, string> } }
               | undefined
             if (envBuild?.outDir) {
-              fastify.outDirs![env] = envBuild.outDir
+              reactify.outDirs![env] = envBuild.outDir
             }
             if (envBuild?.rollupOptions?.input) {
               // Capture the first (or primary) entry path. The SSR environment
@@ -124,12 +124,12 @@ export function viteFastify(options: ViteFastifyPluginOptions = {}): Plugin {
         root: resolvedViteRoot,
         build: {
           assetsDir,
-          outDir: fastify.outDirs?.client ?? 'dist/client',
+          outDir: reactify.outDirs?.client ?? 'dist/client',
         },
-        fastify,
+        reactify,
       })
 
-      const outDirs = Object.values(configToWrite.fastify?.outDirs ?? {})
+      const outDirs = Object.values(configToWrite.reactify?.outDirs ?? {})
       const commonDistFolder =
         outDirs.length > 1
           ? findCommonPath(outDirs)
@@ -176,16 +176,16 @@ function makeAllPathsRelative(
   applicationRootDirectory: string,
   resolvedViteConfigToWrite: SerializableViteConfig,
 ): SerializableViteConfig {
-  const { build, fastify, root: absoluteViteRoot } = resolvedViteConfigToWrite
+  const { build, reactify, root: absoluteViteRoot } = resolvedViteConfigToWrite
 
   const absoluteBuildOutDir = isAbsolute(build.outDir)
     ? build.outDir
     : join(absoluteViteRoot, build.outDir)
   const relativeBuildOutDir = relative(applicationRootDirectory, absoluteBuildOutDir)
 
-  const relativeOutDirs = fastify?.outDirs
+  const relativeOutDirs = reactify?.outDirs
     ? Object.fromEntries(
-        Object.entries(fastify.outDirs).map(([key, outDir]) => {
+        Object.entries(reactify.outDirs).map(([key, outDir]) => {
           const absoluteOutDir = isAbsolute(outDir) ? outDir : join(absoluteViteRoot, outDir)
           return [key, relative(applicationRootDirectory, absoluteOutDir)]
         }),
@@ -199,13 +199,13 @@ function makeAllPathsRelative(
       ...build,
       outDir: relativeBuildOutDir,
     },
-    fastify: fastify
+    reactify: reactify
       ? {
-          ...fastify,
+          ...reactify,
           outDirs: relativeOutDirs,
         }
       : undefined,
   }
 }
 
-export default viteFastify
+export default viteReactify

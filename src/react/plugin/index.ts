@@ -3,7 +3,7 @@ import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { transformWithOxc } from 'vite'
-import viteFastify from '../../vite/plugin.js'
+import viteReactify from '../../vite/plugin.js'
 import rsc from '@vitejs/plugin-rsc'
 import {
   prefix,
@@ -111,7 +111,7 @@ export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plug
   }
 
   return [
-    viteFastify({
+    viteReactify({
       clientModule: options.ts ? '$app/index.ts' : '$app/index.js',
     }) as Plugin,
     ...rsc({ serverHandler: false }),

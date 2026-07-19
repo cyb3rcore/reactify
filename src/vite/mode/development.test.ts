@@ -41,7 +41,7 @@ describe('loadEntries', () => {
       spa: false,
       viteConfig: {
         root: '/test',
-        plugins: [{ name: 'vite-fastify', config: vi.fn() }] as unknown[],
+        plugins: [{ name: 'vite-reactify', config: vi.fn() }] as unknown[],
         environments: {
           ssr: {
             build: {

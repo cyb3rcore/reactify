@@ -3,7 +3,7 @@ import type {
   ResolvedConfig as ViteResolvedConfig,
 } from 'vite'
 
-export interface ViteFastifyConfig {
+export interface ViteReactifyConfig {
   clientModule?: string
   entryPaths?: Record<string, string>
   outDirs?: Record<string, string>
@@ -11,13 +11,14 @@ export interface ViteFastifyConfig {
 
 declare module 'vite' {
   interface ResolvedConfig {
-    fastify?: ViteFastifyConfig
+    reactify?: ViteReactifyConfig
   }
 }
+
 
 /** The JSON structure written to vite.config.json by the plugin */
 export interface SerializableViteConfig
   extends Pick<ViteResolvedConfig, 'root'>, Partial<Pick<ViteResolvedConfig, 'base'>> {
   build: Pick<ViteBuildOptions, 'assetsDir' | 'outDir'>
-  fastify?: ViteFastifyConfig
+  reactify?: ViteReactifyConfig
 }

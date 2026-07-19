@@ -88,7 +88,7 @@ export async function configure(options: ReactifyViteOptions): Promise<RuntimeCo
   }
 
   runtimeConfig.clientModule =
-    viteConfig.fastify?.clientModule ??
+    viteConfig.reactify?.clientModule ??
     runtimeConfig.clientModule ??
     resolveClientModule(viteConfig.root)
 
