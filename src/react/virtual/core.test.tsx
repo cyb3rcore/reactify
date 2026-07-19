@@ -7,10 +7,12 @@ import React from 'react'
 import {
   RouteProvider,
   useRouteContext,
+  useNavigate,
+  useParams,
   useRouteData,
   useRouteHead,
 } from './core.js'
-import { useNavigate, useParams, type RouteDef } from '../core-shared.js'
+import { type RouteDef } from '../core-shared.js'
 
 // Set up mock route table with static and parameterized paths
 const testRoutes = [

@@ -11,10 +11,13 @@ import {
   startTransition,
 } from 'react'
 import { matchRoute, parseLocation, type ParsedLocation } from '../router.js'
-import { routeMapRef, isServer, type RouteDef, type RouteContextValue, type RouteProviderProps } from '../core-shared.js'
+import type { RouteDef, RouteContextValue, RouteProviderProps } from '../core-shared.js'
 
-export { RouteDef, RouteContextValue, RouteProviderProps, useParams, useNavigate } from '../core-shared.js'
+export type { RouteDef, RouteContextValue, RouteProviderProps } from '../core-shared.js'
 
+const RSC_SYNC_CTX = Symbol.for('reactify.rscContext')
+const isServer = typeof window === 'undefined'
+const routeMapRef: { current: Record<string, unknown> } = { current: {} }
 const useIsomorphicLayoutEffect = typeof document !== 'undefined' ? useLayoutEffect : useEffect
 
 const RouterCtx = createContext<RouteContextValue | null>(null)
@@ -33,6 +36,22 @@ export function useRouteData() {
 export function useRouteHead() {
   const { route } = useRouteContext()
   return route?.head ?? null
+}
+export function useNavigate() {
+  return useRouteContext().navigate
+}
+
+export function useParams() {
+  if (isServer) {
+    const syncCtx = (globalThis as Record<symbol, unknown>)[RSC_SYNC_CTX]
+    if (syncCtx && typeof syncCtx === 'object') {
+      const rscParams = (syncCtx as Record<string, unknown>).params as
+        | Record<string, string>
+        | undefined
+      if (rscParams) return rscParams
+    }
+  }
+  return useRouteContext().params
 }
 
 async function waitFetch(url: string): Promise<Record<string, unknown>> {

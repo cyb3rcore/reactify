@@ -1,4 +1,3 @@
-import { useRouteContext } from './virtual/core.js'
 import type { ParsedLocation } from './router.js'
 import type React from 'react'
 
@@ -28,26 +27,3 @@ export interface RouteProviderProps {
   routeMap?: Record<string, unknown>
   children: React.ReactNode
 }
-
-const RSC_SYNC_CTX = Symbol.for('reactify.rscContext')
-const isServer = typeof window === 'undefined'
-const routeMapRef: { current: Record<string, unknown> } = { current: {} }
-
-export function useNavigate() {
-  return useRouteContext().navigate
-}
-
-export function useParams() {
-  if (isServer) {
-    const syncCtx = (globalThis as Record<symbol, unknown>)[RSC_SYNC_CTX]
-    if (syncCtx && typeof syncCtx === 'object') {
-      const rscParams = (syncCtx as Record<string, unknown>).params as
-        | Record<string, string>
-        | undefined
-      if (rscParams) return rscParams
-    }
-  }
-  return useRouteContext().params
-}
-
-export { isServer, RSC_SYNC_CTX, routeMapRef }
