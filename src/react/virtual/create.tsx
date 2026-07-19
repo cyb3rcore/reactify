@@ -1,4 +1,5 @@
-import { RouteProvider, type RouteDef } from './core.js'
+import { RouteProvider } from './core.js'
+import { type RouteDef } from '../core-shared.js'
 import { RouteRenderer } from './root.js'
 
 // NOTE: This file assembles RouteProvider + RouteRenderer as a reusable create()

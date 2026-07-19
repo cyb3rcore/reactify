@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useRef, type ReactNode, type MouseEvent } from 'react'
-import { useNavigate } from './core.js'
+import { useNavigate } from '../core-shared.js'
 import { prefetchRsc } from './prefetch-cache.js'
 
 interface LinkProps {

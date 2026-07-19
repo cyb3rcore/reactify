@@ -9,39 +9,13 @@ import {
   useCallback,
   useRef,
   startTransition,
-  type ReactNode,
 } from 'react'
 import { matchRoute, parseLocation, type ParsedLocation } from '../router.js'
+import { routeMapRef, isServer, type RouteDef, type RouteContextValue, type RouteProviderProps } from '../core-shared.js'
 
-const isServer = typeof window === 'undefined'
+export { RouteDef, RouteContextValue, RouteProviderProps, useParams, useNavigate } from '../core-shared.js'
+
 const useIsomorphicLayoutEffect = typeof document !== 'undefined' ? useLayoutEffect : useEffect
-const routeMapRef: { current: Record<string, unknown> } = { current: {} }
-
-/**
- * Matches the symbol key in rsc-context.ts. The RSC handler (rsc-entry.tsx)
- * stores params on this global symbol via setSyncContext(). We read it
- * directly here so useParams() works in both RSC and SSR environments.
- */
-const RSC_SYNC_CTX = Symbol.for('reactify.rscContext')
-
-export interface RouteDef {
-  path: string
-  id?: string
-  component?: React.ComponentType<Record<string, unknown>>
-  layout?: React.ComponentType<{ children: ReactNode }>
-  getData?: (ctx: Record<string, unknown>) => Promise<Record<string, unknown>>
-  getMeta?: (ctx: Record<string, unknown>) => Promise<Record<string, unknown>>
-  onEnter?: (ctx: Record<string, unknown>) => Promise<unknown>
-  rsc?: boolean
-}
-
-export interface RouteContextValue {
-  location: ParsedLocation
-  match: RouteDef | null
-  params: Record<string, string>
-  navigate: (to: string | number, options?: { replace?: boolean; state?: unknown }) => void
-  route: Record<string, unknown> | null
-}
 
 const RouterCtx = createContext<RouteContextValue | null>(null)
 
@@ -49,28 +23,6 @@ export function useRouteContext(): RouteContextValue {
   const ctx = useContext(RouterCtx)
   if (!ctx) throw new Error('useRouteContext must be used within a RouteProvider')
   return ctx
-}
-
-export function useNavigate() {
-  return useRouteContext().navigate
-}
-
-export function useParams() {
-  // RSC server rendering: params come from rsc-context.ts's
-  // globalThis bridge (populated by rsc-entry.tsx via setSyncContext).
-  // React hooks (useContext) are not available in RSC server components
-  // because there's no RouteProvider wrapping the element tree, so we
-  // read from the global symbol directly.
-  if (isServer) {
-    const syncCtx = (globalThis as Record<symbol, unknown>)[RSC_SYNC_CTX]
-    if (syncCtx && typeof syncCtx === 'object') {
-      const rscParams = (syncCtx as Record<string, unknown>).params as
-        | Record<string, string>
-        | undefined
-      if (rscParams) return rscParams
-    }
-  }
-  return useRouteContext().params
 }
 
 export function useRouteData() {
@@ -89,14 +41,6 @@ async function waitFetch(url: string): Promise<Record<string, unknown>> {
   const response = await fetch(`${url}${separator}${cacheBuster}`)
   if (!response.ok) throw new Error(`Fetch failed: ${response.status}`)
   return response.json()
-}
-
-export interface RouteProviderProps {
-  routes: RouteDef[]
-  location?: string
-  ctxHydration?: Record<string, unknown>
-  routeMap?: Record<string, unknown>
-  children: ReactNode
 }
 
 export function RouteProvider({

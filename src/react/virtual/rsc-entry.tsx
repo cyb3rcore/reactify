@@ -16,7 +16,7 @@ import {
   decodeFormState,
 } from '@vitejs/plugin-rsc/rsc'
 import { createElement, type ComponentType, type ReactNode } from 'react'
-import type { RouteDef } from './core.js'
+import type { RouteDef } from '../core-shared.js'
 import { matchRoute } from '../router.js'
 import { getContext, setSyncContext } from '../rsc-context.js'
 import { filePathToRoutePath } from '../route-utils.js'
