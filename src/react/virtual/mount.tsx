@@ -1,3 +1,5 @@
+'use client';
+
 import { StrictMode, type ReactNode } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { RouteProvider, type RouteDef } from './core.js'

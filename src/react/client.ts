@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, useContext, lazy, type ComponentType, type ReactNode } from 'react'
 import { useSnapshot } from 'valtio'
 
