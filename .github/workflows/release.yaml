@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   id-token: write
+  actions: read
   issues: write
 jobs:
   release:
@@ -22,12 +23,13 @@ jobs:
           COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
           echo "Checking E2E status for commit $COMMIT_SHA"
 
-          for i in $(seq 1 60); do
-            CONCLUSION=$(gh run list \
-              --workflow E2E \
-              --commit "$COMMIT_SHA" \
-              --json conclusion,databaseId \
-              --jq '.[0].conclusion // "pending"' 2>/dev/null || echo "pending")
+          for i in $(seq 1 30); do
+            RAW=$(gh api \
+              "/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${COMMIT_SHA}&per_page=10" \
+              --jq '[.workflow_runs[] | select(.name == "E2E")] | sort_by(.run_number) | reverse | .[0].conclusion // "pending"' \
+              2>/dev/null || echo "pending")
+            echo "gh api returned: $RAW"
+            CONCLUSION=$RAW
 
             case "$CONCLUSION" in
               success)
@@ -39,13 +41,13 @@ jobs:
                 exit 1
                 ;;
               pending|""|null)
-                echo "E2E still running (attempt $i/60), waiting 30s..."
-                sleep 30
+                echo "E2E still running (attempt $i/30), waiting 10s..."
+                sleep 10
                 ;;
             esac
           done
 
-          echo "Timed out waiting for E2E after 30 minutes"
+          echo "Timed out waiting for E2E after 5 minutes"
           exit 1
 
       - uses: actions/checkout@v5
