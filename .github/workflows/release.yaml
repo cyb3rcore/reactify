@@ -28,7 +28,7 @@ jobs:
               --workflow E2E \
               --commit "$COMMIT_SHA" \
               --json conclusion,databaseId \
-              --jq '.[0].conclusion // "pending"' 2>/dev/null)
+              --jq '.[0].conclusion // "pending"' 2>/dev/null || echo "pending")
 
             case "$CONCLUSION" in
               success)
