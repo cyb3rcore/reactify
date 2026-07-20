@@ -111,4 +111,11 @@ test.describe('RSC e2e', () => {
       timeout: 10000,
     })
   })
+
+  test('RSC page with layout renders header and footer', async ({ page }) => {
+    await page.goto(`${BASE_URL}/rsc-with-layout`)
+    await expect(page.locator('header')).toHaveText('E2E Layout Header')
+    await expect(page.locator('footer')).toHaveText('E2E Layout Footer')
+    await expect(page.locator('main')).toContainText('RSC page with layout')
+  })
 })

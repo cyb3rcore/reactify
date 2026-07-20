@@ -23,6 +23,7 @@ import { filePathToRoutePath } from '../route-utils.js'
 import type { RscAttachedRequest } from '../rsc-handler.js'
 import { isRedirectError } from '../redirect.js'
 import routesManifest from '$app/routes.js'
+import { loaders as layoutLoaders } from '$app/layouts.js'
 import ValtioHydrator from '$app/valtio-hydrator.js'
 
 function escapeHtml(text: string): string {
@@ -139,6 +140,7 @@ const HEADER_ACTION_ID = 'x-rsc-action'
  */
 interface PageModule {
   default?: ComponentType<Record<string, unknown>>
+  layout?: string
   getMeta?: (opts: { url: URL }) => Promise<Record<string, unknown>>
   onEnter?: (ctx: Record<string, unknown>) => Promise<Record<string, unknown> | void>
 }
@@ -465,12 +467,30 @@ async function handler(request: Request): Promise<Response> {
       ;(globalThis as Record<string, unknown>).__rsc_formState = formState
     }
 
-    // Create a React element from the route module's default export.
+    // Create a React element from the route module's default export, then
+    // wrap in the layout component if the page exports a layout name.
     // pageModule is narrowed to PageModule by the isPageModule guard above,
     // so default is already ComponentType<...> | undefined.
     const element: ReactNode = pageModule.default
       ? createElement(pageModule.default, { params: matchResult.params })
       : null
+
+    let wrappedElement: ReactNode = element
+    if (pageModule.layout && element) {
+      const layoutName = pageModule.layout
+      // Glob pattern is '/layouts/*.{jsx,tsx}', keys are like
+      // '/layouts/default.tsx', name is 'default' (path.slice(9, -4)).
+      const layoutKey = Object.keys(layoutLoaders).find(
+        (key) => key.slice(9, -4) === layoutName,
+      )
+      if (layoutKey) {
+        const layoutMod = await layoutLoaders[layoutKey]()
+        const Layout = (layoutMod as { default?: ComponentType<{ children: ReactNode }> }).default
+        if (Layout) {
+          wrappedElement = createElement(Layout, null, element)
+        }
+      }
+    }
 
     // Do NOT clear __rsc_formState here — the element created above is a
     // React element (createElement does NOT invoke the component function).
@@ -483,7 +503,7 @@ async function handler(request: Request): Promise<Response> {
         {
           route: { id: matchedRoute.id, path: matchedRoute.path },
           params: matchResult.params,
-          element,
+          element: wrappedElement,
         },
       ],
       location: {

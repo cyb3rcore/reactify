@@ -1,3 +1,4 @@
+'use client';
 import { type ReactNode } from 'react'
 import { useRouteContext } from './core.js'
 import RscSlot from './rsc-content.js'

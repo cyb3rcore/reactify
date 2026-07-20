@@ -49,4 +49,20 @@ describe('react-rsc', () => {
       await server.close()
     }
   })
+
+  it('RSC page with layout export wraps content in layout', async () => {
+    const server = await main(true)
+    try {
+      const res = await server.inject({ method: 'GET', url: '/rsc-with-layout' })
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toContain('<!doctype html>')
+      expect(res.body).toContain('__FLIGHT_DATA')
+      expect(res.body).toContain('E2E Layout Header')
+      expect(res.body).toContain('E2E Layout Footer')
+      expect(res.body).toContain('RSC page with layout')
+      expect(res.body).not.toContain('Error:')
+    } finally {
+      await server.close()
+    }
+  })
 })
