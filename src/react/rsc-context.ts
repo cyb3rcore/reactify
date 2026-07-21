@@ -1,4 +1,3 @@
-import { AsyncLocalStorage } from 'node:async_hooks'
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 
 export interface RscContext {
@@ -8,7 +7,26 @@ export interface RscContext {
   params?: Record<string, string>
 }
 
-const rscStore = new AsyncLocalStorage<RscContext>()
+// Guard AsyncLocalStorage so the module loads in the browser without crashing.
+// Dynamic import of node:async_hooks is only attempted when we detect Node.js
+// (process.release?.name === 'node'), avoiding Vite's externalization error.
+// In the browser, a minimal fallback just invokes callbacks synchronously.
+interface RscAsyncStorage {
+  getStore(): RscContext | undefined
+  run<R>(store: RscContext, callback: (...args: unknown[]) => R, ...args: unknown[]): R
+}
+
+const rscStore: RscAsyncStorage = await (async () => {
+  const isNode = typeof process !== 'undefined' && process.release?.name === 'node'
+  if (isNode) {
+    const { AsyncLocalStorage } = await import('node:async_hooks')
+    return new AsyncLocalStorage<RscContext>()
+  }
+  return {
+    getStore: () => undefined,
+    run: <R>(_store: RscContext, fn: (...args: unknown[]) => R, ...args: unknown[]) => fn(...args),
+  }
+})()
 
 /**
  * Shared symbol key for crossing the Vite SSR module boundary.

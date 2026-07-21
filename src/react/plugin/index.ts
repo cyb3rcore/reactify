@@ -166,6 +166,9 @@ export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plug
           if (id === '@cyb3rcore/reactify' || id === 'reactify') {
             return { id: '\0reactify:client-stub' }
           }
+          if (id === '@cyb3rcore/reactify/server' || id === 'reactify/server') {
+            return { id: '\0reactify:server-stub' }
+          }
           // Safety net: prevent any vite config module from reaching the client
           if (
             id.includes('/dist/vite/config/') ||
@@ -212,6 +215,20 @@ export default function viteReactifyPlugin(options: { ts?: boolean } = {}): Plug
             return transformWithOxc(code, id, {
               jsx: { runtime: 'automatic', importSource: 'react' },
             })
+          }
+
+          // Strip dynamic import of node:async_hooks from rsc-context module when served
+          // to the browser. The import is inside `if (isNode) { ... }` guard, but Vite's
+          // server-side module analyzer still detects it and tries to load the externalized
+          // module proxy, causing "[Unhandled rejection]" errors.
+          // The compiled dist preserves the original pattern, so matching works for both
+          // source (.ts) and compiled (.js) versions.
+          if (id.endsWith('rsc-context.ts') || id.endsWith('rsc-context.js')) {
+            const replaced = code.replace(
+              /if\s*\(\s*isNode\s*\)\s*\{[\s\S]*?await\s+import\(['"]node:async_hooks['"]\)[\s\S]*?return\s+new\s+AsyncLocalStorage\(\);[\s\S]*?\}/,
+              'return {\n    getStore: () => undefined,\n    run: (_store, fn, ...args) => fn(...args),\n}',
+            )
+            if (replaced !== code) return replaced
           }
         },
       },
@@ -299,6 +316,18 @@ async function load(
   }
   if (id === '\0reactify:vite-config-stub') {
     return { code: 'export default {};', map: null }
+  }
+  if (id === '\0reactify:server-stub') {
+    return {
+      code: [
+        'export function getContext() { return undefined }',
+        'export function getReq() { return undefined }',
+        'export function getReply() { return undefined }',
+        'export function getServer() { return undefined }',
+        'export { redirect, isRedirectError, RedirectError } from "@cyb3rcore/reactify/dist/react/redirect.js"',
+      ].join('\n'),
+      map: null,
+    }
   }
 
   // Patch user modules that import useActionState from react.
@@ -433,6 +462,24 @@ function config(
     for (const pkgName of reactifyPkgExcludes) {
       if (!(exclude as string[]).includes(pkgName)) {
         (exclude as string[]).push(pkgName)
+      }
+    }
+  }
+  // Also exclude the reactify package from the client environment's dep optimizer
+  // to prevent it from pre-bundling rsc-context.js (which references node:async_hooks
+  // inside a conditional import). The optimizer follows ALL imports including dead code
+  // paths, triggering Vite's externalization error for node:async_hooks.
+  if (reactifyPkgExcludes.length > 0) {
+    // Client environment: add to optimizeDeps.exclude (top-level config)
+    const clientOptDeps = (rawConfig.optimizeDeps ?? {}) as Record<string, unknown>
+    let clientExclude = clientOptDeps.exclude as string[] | undefined
+    if (!clientExclude) {
+      clientExclude = []
+      clientOptDeps.exclude = clientExclude
+    }
+    for (const pkgName of reactifyPkgExcludes) {
+      if (!clientExclude.includes(pkgName)) {
+        clientExclude.push(pkgName)
       }
     }
   }
