@@ -1,10 +1,19 @@
-function createClientEnvironment(dev: boolean, outDir: string) {
+function createClientEnvironment(dev: boolean, outDir: string, clientModule?: string) {
   return {
     build: {
       outDir: `${outDir}/client`,
       minify: !dev,
       sourcemap: dev,
       manifest: true,
+      ...(clientModule
+        ? {
+            rollupOptions: {
+              input: {
+                index: clientModule,
+              },
+            },
+          }
+        : {}),
     },
   }
 }

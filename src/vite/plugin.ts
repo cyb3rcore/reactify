@@ -39,22 +39,24 @@ export function viteReactify(options: ViteReactifyPluginOptions = {}): Plugin {
       const { createSSREnvironment, createClientEnvironment } =
         await import('./config/environments.js')
 
+      // Resolve entry point early — needed for both SSR and client environments
+      const ssrEntryPoint = !spa ? clientModule ?? resolveClientModule(rawConfig.root ?? '.') : undefined
+      if (!spa && !ssrEntryPoint) {
+        throw new Error(
+          'Could not resolve SSR entry point. Provide a clientModule option or create an index.{js,mjs,mts,ts,cjs,jsx,tsx} file.',
+        )
+      }
+
       if (!rawConfig.environments) {
         rawConfig.environments = {}
       }
       rawConfig.environments.client = deepMerge(
-        createClientEnvironment(isDevMode, outDir),
+        createClientEnvironment(isDevMode, outDir, ssrEntryPoint ?? undefined),
         rawConfig.environments.client ?? {},
       )
       if (!spa) {
-        const ssrEntryPoint = clientModule ?? resolveClientModule(rawConfig.root ?? '.')
-        if (!ssrEntryPoint) {
-          throw new Error(
-            'Could not resolve SSR entry point. Provide a clientModule option or create an index.{js,mjs,mts,ts,cjs,jsx,tsx} file.',
-          )
-        }
         rawConfig.environments.ssr = deepMerge(
-          createSSREnvironment(isDevMode, outDir, ssrEntryPoint),
+          createSSREnvironment(isDevMode, outDir, ssrEntryPoint!),
           rawConfig.environments.ssr ?? {},
         )
         if (!rawConfig.builder) {
