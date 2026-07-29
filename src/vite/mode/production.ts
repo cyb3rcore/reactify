@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, parse, resolve } from 'node:path'
 import type { FastifyInstance } from 'fastify'
 import FastifyStatic from '@fastify/static'
@@ -56,13 +56,19 @@ async function loadBundle(
     getBundlePath = (serverFile: string) => fixWin32Path(resolve(pkgDir, distOutDir, serverFile))
   }
 
+  let found = false
   let bundlePath: string | URL | undefined
 
   for (const serverFile of bundleFiles) {
-    bundlePath = getBundlePath(serverFile)
-    if (existsSync(bundlePath)) {
+    const candidate = getBundlePath(serverFile)
+    if (existsSync(candidate)) {
+      bundlePath = candidate
+      found = true
       break
     }
+  }
+  if (!found) {
+    return {}
   }
   let bundle = await import(bundlePath as string)
   if (typeof bundle.default === 'function') {
@@ -94,6 +100,56 @@ async function loadEntries(
     }
   }
   return entries
+}
+
+interface ClientManifestEntry {
+  file?: unknown
+  isEntry?: unknown
+  src?: unknown
+}
+
+async function ensureClientIndexHtml(
+  clientOutDir: string,
+  viteConfig: SerializableViteConfig,
+): Promise<void> {
+  const indexHtmlPath = join(clientOutDir, 'index.html')
+  let indexHtml: string
+  if (existsSync(indexHtmlPath)) {
+    indexHtml = await readFile(indexHtmlPath, 'utf8')
+    if (!indexHtml.includes('$app/mount')) {
+      return
+    }
+  } else {
+    const sourceIndexPath = join(viteConfig.root!, 'index.html')
+    indexHtml = await readFile(sourceIndexPath, 'utf8')
+  }
+  const manifest = JSON.parse(
+    await readFile(join(clientOutDir, '.vite', 'manifest.json'), 'utf8'),
+  ) as Record<string, ClientManifestEntry>
+  const entries = Object.values(manifest).filter(
+    (entry): entry is ClientManifestEntry & { file: string; src: string } =>
+      entry.isEntry === true && typeof entry.file === 'string' && typeof entry.src === 'string',
+  )
+  const clientEntry =
+    entries.find((entry) => entry.src.replace(/\.[^/.]+$/, '').endsWith('$app/mount')) ??
+    entries.find((entry) => entry.src.replace(/\.[^/.]+$/, '').endsWith('$app/index'))
+
+  if (!clientEntry || typeof clientEntry.file !== 'string') {
+    throw new Error('Could not find the production client entry in the Vite manifest.')
+  }
+
+  indexHtml = indexHtml.replace(
+    /<script\b[^>]*\btype\s*=\s*["']module["'][^>]*>[\s\S]*?<\/script\s*>/gi,
+    '',
+  )
+
+  const base = (viteConfig.base || '/').replace(/\/?$/, '/')
+  const assetPath = `${base}${clientEntry.file}`
+  indexHtml = indexHtml.replace(
+    '</head>',
+    `    <script type="module" crossorigin src="${assetPath}"></script>\n  </head>`,
+  )
+  await writeFile(indexHtmlPath, indexHtml)
 }
 
 export async function setup(
@@ -173,6 +229,7 @@ export async function setup(
     ? await runtimeConfig.prepareClient(entries, reactifyViteDecoration.scope, runtimeConfig)
     : null
 
+  await ensureClientIndexHtml(clientOutDir, viteConfig)
   const indexHtmlPath = join(clientOutDir, 'index.html')
   let indexHtml = await readFile(indexHtmlPath, 'utf8')
   if (runtimeConfig.baseAssetUrl) {

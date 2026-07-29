@@ -37,9 +37,9 @@ function loadHtmlTemplate(): string {
         'index.html',
       ]
     : [
+        join(process.cwd(), 'src', 'client', 'dist', 'client', 'index.html'),
         join(process.cwd(), 'src', 'client', 'index.html'),
         join(process.cwd(), 'client', 'dist', 'client', 'index.html'),
-        join(process.cwd(), 'client', 'index.html'),
         'client/index.html',
         join(process.cwd(), 'index.html'),
         'index.html',

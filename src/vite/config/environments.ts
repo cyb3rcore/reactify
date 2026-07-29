@@ -10,6 +10,7 @@ function createClientEnvironment(dev: boolean, outDir: string, clientModule?: st
             rollupOptions: {
               input: {
                 index: clientModule,
+                mount: clientModule.endsWith('.ts') ? '$app/mount.ts' : '$app/mount.js',
               },
             },
           }
