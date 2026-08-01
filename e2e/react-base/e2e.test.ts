@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { readFile, writeFile } from 'node:fs/promises'
 import { main } from './server'
 
 const PORT = 3001
@@ -56,5 +57,96 @@ test.describe('react-base browser', () => {
     await newPage.waitForLoadState()
     expect(newPage.url()).toContain('example.com')
     await newPage.close()
+  })
+
+  test('updates rendered page without a full page navigation', async ({ page }) => {
+    const pagePath = new URL('./client/pages/index.tsx', import.meta.url)
+    const originalMarkup = '<p>React base e2e</p>'
+    const updatedMarkup = '<p>React base e2e Updated</p>'
+    const originalSource = await readFile(pagePath, 'utf8')
+    let mainFrameNavigations = 0
+
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) mainFrameNavigations++
+    })
+
+    try {
+      await page.goto(BASE_URL)
+      await expect(page.locator('p')).toContainText('React base e2e')
+      mainFrameNavigations = 0
+
+      expect(originalSource).toContain(originalMarkup)
+      await writeFile(pagePath, originalSource.replace(originalMarkup, updatedMarkup))
+
+      await expect(page.locator('p')).toContainText('React base e2e Updated', {
+        timeout: 10000,
+      })
+      expect(mainFrameNavigations).toBe(0)
+    } finally {
+      await writeFile(pagePath, originalSource)
+    }
+  })
+
+  test('edits to a non-current page apply on next SPA navigation', async ({ page }) => {
+    const pagePath = new URL('./client/pages/index.tsx', import.meta.url)
+    const originalMarkup = '<p>React base e2e</p>'
+    const updatedMarkup = '<p>React base e2e Updated</p>'
+    const originalSource = await readFile(pagePath, 'utf8')
+    // framenavigated fires for same-document (pushState/popstate) hops too,
+    // so full-page reloads are detected via document requests instead.
+    let documentLoads = 0
+
+    page.on('request', (req) => {
+      if (req.resourceType() === 'document') documentLoads++
+    })
+
+    try {
+      await page.goto(BASE_URL)
+      await expect(page.locator('p')).toContainText('React base e2e')
+      // Let hydration register the SPA click handler before the hop.
+      await page.waitForTimeout(1000)
+      documentLoads = 0
+      await page.click('a[href="/users/settings"]')
+      await expect(page.locator('p')).toHaveText('Settings page')
+      expect(documentLoads).toBe(0)
+
+      expect(originalSource).toContain(originalMarkup)
+      await writeFile(pagePath, originalSource.replace(originalMarkup, updatedMarkup))
+
+      await expect(page.locator('p')).toHaveText('Settings page')
+      expect(documentLoads).toBe(0)
+
+      await page.goBack()
+      await expect(page.locator('p')).toContainText('React base e2e Updated')
+      expect(documentLoads).toBe(0)
+    } finally {
+      await writeFile(pagePath, originalSource)
+    }
+  })
+
+  test('updates a param route page in place without navigation', async ({ page }) => {
+    const pagePath = new URL('./client/pages/users/[id].tsx', import.meta.url)
+    const originalMarkup = 'User: ${params.id}'
+    const updatedMarkup = 'User: ${params.id} Updated'
+    const originalSource = await readFile(pagePath, 'utf8')
+    let documentLoads = 0
+
+    page.on('request', (req) => {
+      if (req.resourceType() === 'document') documentLoads++
+    })
+
+    try {
+      await page.goto(`${BASE_URL}/users/42`)
+      await expect(page.locator('p')).toHaveText('User: 42')
+      documentLoads = 0
+
+      expect(originalSource).toContain(originalMarkup)
+      await writeFile(pagePath, originalSource.replace(originalMarkup, updatedMarkup))
+
+      await expect(page.locator('p')).toHaveText('User: 42 Updated', { timeout: 10000 })
+      expect(documentLoads).toBe(0)
+    } finally {
+      await writeFile(pagePath, originalSource)
+    }
   })
 })

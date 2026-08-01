@@ -9,8 +9,11 @@ import {
   useCallback,
   useRef,
   startTransition,
+  type ComponentType,
+  type ReactNode,
 } from 'react'
 import { matchRoute, parseLocation, type ParsedLocation } from '../router.js'
+import { findSerializedRouteByFile, createRefreshSequencer } from '../hmr-client.js'
 import type { RouteDef, RouteContextValue, RouteProviderProps } from '../core-shared.js'
 
 export type { RouteDef, RouteContextValue, RouteProviderProps } from '../core-shared.js'
@@ -21,6 +24,74 @@ const routeMapRef: { current: Record<string, unknown> } = { current: {} }
 const useIsomorphicLayoutEffect = typeof document !== 'undefined' ? useLayoutEffect : useEffect
 
 const RouterCtx = createContext<RouteContextValue | null>(null)
+
+let routeRefreshHandler:
+  | ((
+      routeId: string,
+      component: ComponentType<Record<string, unknown>>,
+      layout: ComponentType<{ children: ReactNode }> | undefined,
+    ) => void)
+  | null = null
+let pendingRouteRefresh:
+  | {
+      routeId: string
+      component: ComponentType<Record<string, unknown>>
+      layout: ComponentType<{ children: ReactNode }> | undefined
+    }
+  | null = null
+const refreshSeq = createRefreshSequencer()
+
+// Non-RSC route HMR: @vitejs/plugin-rsc suppresses client-environment updates
+// for page modules it tracks (all pages are reachable from the RSC routes
+// glob), so editing a page never reaches the browser through the normal HMR
+// pipeline. The plugin does broadcast 'rsc:update' for any tracked file
+// change, so we listen here and refresh the page whose file changed: re-import
+// with a cache-busting query (the browser module registry still holds the
+// pre-edit module), then swap the component and layout through the live
+// RouteProvider state. Registered at module scope so the listener exists
+// before hydration; updates that arrive before RouteProvider mounts are
+// queued and consumed on mount. Edits to files that are not page modules
+// (layouts, shared components) match no route and are skipped — their browser
+// registry entries stay stale (known limitation). RSC routes are skipped
+// here; rsc-content.tsx refreshes those via the Flight stream.
+if (import.meta.hot && typeof window !== 'undefined') {
+  const onRscUpdate = (data: unknown) => {
+    const file = (data as { file?: string } | undefined)?.file
+    if (!file) return
+    const route = findSerializedRouteByFile(file)
+    if (!route || route.rsc || !route.id) return
+    const routeId = route.id
+    const seq = refreshSeq.next()
+    import(/* @vite-ignore */ `${routeId}?t=${Date.now()}`)
+      .then((mod) => {
+        if (!refreshSeq.isCurrent(seq)) return
+        const fresh = mod as {
+          default?: ComponentType<Record<string, unknown>>
+          layout?: unknown
+        }
+        const component = fresh.default
+        if (!component) return
+        const layout =
+          typeof fresh.layout === 'function'
+            ? (fresh.layout as ComponentType<{ children: ReactNode }>)
+            : undefined
+        if (routeRefreshHandler) {
+          routeRefreshHandler(routeId, component, layout)
+        } else {
+          pendingRouteRefresh = { routeId, component, layout }
+        }
+      })
+      .catch((error: unknown) => {
+        if (refreshSeq.isCurrent(seq)) {
+          console.error('[core] route HMR refresh error:', error)
+        }
+      })
+  }
+  import.meta.hot.on('rsc:update', onRscUpdate)
+  import.meta.hot.dispose(() => {
+    import.meta.hot?.off('rsc:update', onRscUpdate)
+  })
+}
 
 export function useRouteContext(): RouteContextValue {
   const ctx = useContext(RouterCtx)
@@ -102,6 +173,39 @@ export function RouteProvider({
   const [routeData, setRouteData] = useState<Record<string, unknown> | null>(initialRoute.route)
   const firstRenderRef = useRef(true)
   if (routeMap) routeMapRef.current = routeMap
+
+  // Non-RSC HMR: apply components refreshed by the module-level 'rsc:update'
+  // listener (see module scope above). Mutating the live route defs (the
+  // `routes` prop array — the current match object is one of them) makes
+  // future SPA navigations pick up the fresh module; setMatch re-renders when
+  // the refreshed page is the one currently shown. The queue covers updates
+  // that arrived before this effect ran.
+  useEffect(() => {
+    const applyRefresh = (
+      routeId: string,
+      component: ComponentType<Record<string, unknown>>,
+      layout: ComponentType<{ children: ReactNode }> | undefined,
+    ) => {
+      for (const def of routes) {
+        if (def.id === routeId) {
+          def.component = component
+          def.layout = layout
+        }
+      }
+      setMatch((m) =>
+        m.route && m.route.id === routeId ? { ...m, route: { ...m.route, component, layout } } : m,
+      )
+    }
+    routeRefreshHandler = applyRefresh
+    if (pendingRouteRefresh) {
+      const pending = pendingRouteRefresh
+      pendingRouteRefresh = null
+      applyRefresh(pending.routeId, pending.component, pending.layout)
+    }
+    return () => {
+      routeRefreshHandler = null
+    }
+  }, [routes])
 
   // On navigation (non-RSC): re-fetch data via getData endpoint
   useEffect(() => {
