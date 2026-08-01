@@ -1,3 +1,5 @@
+import type { FastifyInstance } from 'fastify'
+import { readFile, writeFile } from 'node:fs/promises'
 import { test, expect } from '@playwright/test'
 import { main } from './server'
 
@@ -5,7 +7,7 @@ const PORT = 3002
 const BASE_URL = `http://localhost:${PORT}`
 
 test.describe('RSC e2e', () => {
-  let server: Awaited<ReturnType<typeof main>>
+  let server: FastifyInstance
 
   test.beforeAll(async () => {
     server = await main(true)
@@ -117,5 +119,33 @@ test.describe('RSC e2e', () => {
     await expect(page.locator('header')).toHaveText('E2E Layout Header')
     await expect(page.locator('footer')).toHaveText('E2E Layout Footer')
     await expect(page.locator('main')).toContainText('RSC page with layout')
+  })
+
+  test('updates rendered server component without a full page navigation', async ({ page }) => {
+    const pagePath = new URL('./client/pages/rsc-page.tsx', import.meta.url)
+    const originalMarkup = '<h1>RSC Page</h1>'
+    const updatedMarkup = '<h1>RSC Page Updated</h1>'
+    const originalSource = await readFile(pagePath, 'utf8')
+    let mainFrameNavigations = 0
+
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) mainFrameNavigations++
+    })
+
+    try {
+      await page.goto(`${BASE_URL}/rsc-page`)
+      await expect(page.getByRole('heading', { name: 'RSC Page' })).toBeVisible()
+      mainFrameNavigations = 0
+
+      expect(originalSource).toContain(originalMarkup)
+      await writeFile(pagePath, originalSource.replace(originalMarkup, updatedMarkup))
+
+      await expect(page.getByRole('heading', { name: 'RSC Page Updated' })).toBeVisible({
+        timeout: 10000,
+      })
+      expect(mainFrameNavigations).toBe(0)
+    } finally {
+      await writeFile(pagePath, originalSource)
+    }
   })
 })

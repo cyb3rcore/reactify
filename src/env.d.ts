@@ -17,6 +17,8 @@ interface ImportMeta {
     accept(path: string, cb: (mod: unknown) => void): void
     dispose(cb: (data: unknown) => void): void
     invalidate(): void
+    on(event: string, cb: (...args: unknown[]) => void): void
+    off(event: string, cb: (...args: unknown[]) => void): void
   }
 }
 
