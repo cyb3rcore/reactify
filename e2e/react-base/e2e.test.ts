@@ -149,4 +149,29 @@ test.describe('react-base browser', () => {
       await writeFile(pagePath, originalSource)
     }
   })
+
+  test('Link forwards className and data attributes in SSR HTML and after hydration', async ({
+    page,
+    request,
+  }) => {
+    // SSR HTML: the server-rendered pass must already carry the forwarded props.
+    const ssrHtml = await (await request.get(BASE_URL)).text()
+    expect(ssrHtml).toContain('href="/users/settings"')
+    expect(ssrHtml).toMatch(/<a[^>]*class="e2e-link"[^>]*data-e2e-link="yes"[^>]*>/)
+
+    // Post-hydration DOM: same props, no hydration errors, navigation intact.
+    const errors: string[] = []
+    page.on('pageerror', (err) => errors.push(err.message))
+
+    await page.goto(BASE_URL)
+    const link = page.locator('a[data-e2e-link="yes"]')
+    await expect(link).toHaveAttribute('class', 'e2e-link')
+    await expect(link).toHaveAttribute('href', '/users/settings')
+    await expect(link).toHaveText('Settings via Link')
+    expect(errors).toEqual([])
+
+    // The internal click handler still navigates with the props spread in place.
+    await link.click()
+    await expect(page.locator('p')).toHaveText('Settings page')
+  })
 })

@@ -72,6 +72,76 @@ describe('Link', () => {
     expect(prefetchRsc).not.toHaveBeenCalled()
   })
 
+  it('forwards unknown props to the rendered anchor', () => {
+    render(
+      <RouteProvider routes={testRoutes} location="/">
+        <Link
+          to="/about"
+          className="btn"
+          data-e2e="link-props"
+          aria-label="About page"
+          id="about-link"
+          target="_blank"
+          rel="noopener"
+          style={{ color: 'red' }}
+        >
+          About
+        </Link>
+      </RouteProvider>,
+    )
+    const link = screen.getByText('About')
+    expect(link.getAttribute('class')).toBe('btn')
+    expect(link.getAttribute('data-e2e')).toBe('link-props')
+    expect(link.getAttribute('aria-label')).toBe('About page')
+    expect(link.getAttribute('id')).toBe('about-link')
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(link.getAttribute('rel')).toBe('noopener')
+    expect((link as HTMLElement).style.color).toBe('red')
+  })
+
+  it('keeps href derived from to when rest props are present', () => {
+    render(
+      <RouteProvider routes={testRoutes} location="/">
+        <Link to="/about" className="btn">
+          About
+        </Link>
+      </RouteProvider>,
+    )
+    const link = screen.getByText('About')
+    expect(link.getAttribute('href')).toBe('/about')
+  })
+
+  it('internal click handler wins over a caller-supplied onClick', () => {
+    const callerOnClick = vi.fn()
+    render(
+      <RouteProvider routes={testRoutes} location="/">
+        <Link to="/about" onClick={callerOnClick}>
+          About
+        </Link>
+      </RouteProvider>,
+    )
+    const link = screen.getByText('About')
+    link.click()
+    expect(callerOnClick).not.toHaveBeenCalled()
+    // Internal handler still navigates.
+    expect(window.location.pathname).toBe('/about')
+  })
+
+  it('internal prefetch handler wins over a caller-supplied onMouseEnter', () => {
+    const callerOnMouseEnter = vi.fn()
+    render(
+      <RouteProvider routes={testRoutes} location="/">
+        <Link to="/about" onMouseEnter={callerOnMouseEnter}>
+          About
+        </Link>
+      </RouteProvider>,
+    )
+    const link = screen.getByText('About')
+    fireEvent.mouseEnter(link)
+    expect(callerOnMouseEnter).not.toHaveBeenCalled()
+    expect(prefetchRsc).toHaveBeenCalledWith('/about')
+  })
+
   it('passes through meta+click without calling navigate', () => {
     const pushStateSpy = vi.spyOn(window.history, 'pushState')
     render(
